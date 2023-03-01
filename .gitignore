@@ -1,0 +1,8 @@
+tmp
+my-app*
+.vscode
+__pycache__
+*.py
+*.exe
+docker*
+Docker*
