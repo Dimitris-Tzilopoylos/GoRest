@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-
+	r := engine.NewApp()
 	connStr := "postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	db.SetMaxOpenConns(50)
@@ -21,7 +21,7 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	r := engine.NewApp()
+
 	r.Get("/", func(res http.ResponseWriter, req *http.Request) {
 		var rr int
 		var todos []int = []int{}
@@ -34,10 +34,8 @@ func main() {
 		scanner(cb)
 		r.Json(res, 200, todos)
 	})
-	r.Get("/<str:test>", func(res http.ResponseWriter, req *http.Request) {
-		fmt.Println("fff")
-		r.Json(res, 200, "containers")
-	})
+
 	r.Listen(fmt.Sprintf(":%s", os.Getenv("PORT")))
+
 	// PARAMS are defined in routes as <type:name>
 }

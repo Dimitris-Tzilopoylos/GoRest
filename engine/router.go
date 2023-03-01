@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"application/ws"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -60,11 +61,12 @@ type RouterMwConfig struct {
 }
 
 type Router struct {
-	routes        map[HttpVerb]map[string]*Route
-	urlKeys       map[HttpVerb][]string
-	env           map[string]string
-	mwPreHandlers map[string][]RouterMwConfig
-	mwPriority    int64
+	routes          map[HttpVerb]map[string]*Route
+	urlKeys         map[HttpVerb][]string
+	env             map[string]string
+	mwPreHandlers   map[string][]RouterMwConfig
+	mwPriority      int64
+	WebSocketServer *ws.WebSocketServer
 }
 
 func (r *Router) Status(res http.ResponseWriter, statusCode int) *Router {
@@ -121,6 +123,7 @@ func (r *Router) Initialize() {
 		r.urlKeys[httpVerb] = []string{}
 		r.routes[httpVerb] = make(map[string]*Route)
 	}
+	r.WebSocketServer = ws.NewWebSocketServer()
 }
 
 func (r *Router) GetApplicationContext() *Router {
@@ -384,16 +387,19 @@ func (r *Router) GetHttpHandler(url string, method HttpVerb) (http.HandlerFunc, 
 
 	matchedUrl, params := r.MatchRoute(url, method, r.urlKeys[method])
 	route = r.routes[method][matchedUrl]
-	handler := route.handler
-	prehandlers := route.preHandlers
+	if route != nil {
+		handler := route.handler
+		prehandlers := route.preHandlers
 
-	if handler != nil {
-		preHandlersWithContext := []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
-		for _, preHandler := range prehandlers {
-			preHandlersWithContext = append(preHandlersWithContext, MiddleWareHandlerWithContext(preHandler, "params", params))
+		if handler != nil {
+			preHandlersWithContext := []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
+			for _, preHandler := range prehandlers {
+				preHandlersWithContext = append(preHandlersWithContext, MiddleWareHandlerWithContext(preHandler, "params", params))
+			}
+			return HandlerWithContext(handler, "params", params), preHandlersWithContext
 		}
-		return HandlerWithContext(handler, "params", params), preHandlersWithContext
 	}
+
 	return r.NotFound, []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
 }
 
@@ -443,6 +449,7 @@ func (r *Router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	enableCors(&res)
 	httpMethod := GetHttpMethod(req)
 	if httpMethod == "OPTIONS" {
+		res.Write([]byte{})
 		return
 	}
 	req = req.WithContext(context.Background())
@@ -472,6 +479,12 @@ func (r *Router) populateUrlKeys() {
 	}
 }
 
+func (r *Router) HandleWrapper(handler http.Handler) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		handler.ServeHTTP(res, req)
+	}
+}
+
 func (r *Router) Listen(port string) {
 	r.populateUrlKeys()
 	server := &http.Server{
@@ -480,8 +493,10 @@ func (r *Router) Listen(port string) {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
+
 	fmt.Println(Cyan + fmt.Sprintf("🖥️  Server started at: http://localhost%s", port) + Reset)
 	err := server.ListenAndServe()
+
 	if err != nil {
 		panic(err.Error())
 	}
