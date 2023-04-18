@@ -1,7 +1,6 @@
 package main
 
 import (
-	"application/database"
 	engine "application/engine"
 	"database/sql"
 	"fmt"
@@ -15,27 +14,25 @@ func main() {
 
 	connStr := "postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
-	db.SetMaxOpenConns(50)
-	db.SetMaxIdleConns(50)
+	db.SetMaxOpenConns(70)
+	db.SetMaxIdleConns(70)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
-	r := engine.NewApp()
-	r.Get("/", func(res http.ResponseWriter, req *http.Request) {
-		var rr int
-		var todos []int = []int{}
-		scanner := database.Query(db, "SELECT id FROM eshop.products")
-		cb := func(rows *sql.Rows) error {
-			err := rows.Scan(&rr)
-			todos = append(todos, rr)
-			return err
+	r := engine.NewApp(db, "eshop")
+
+	r.Post("/", func(res http.ResponseWriter, req *http.Request) {
+		body := engine.GetBody(req)
+		x, err := r.Engine.SelectExec(db, body)
+		if err != nil {
+			r.ErrorResponse(res, 500, err.Error())
+			return
 		}
-		scanner(cb)
-		r.Json(res, 200, todos)
+		r.Json(res, 200, x)
+
 	})
 	r.Get("/<str:test>", func(res http.ResponseWriter, req *http.Request) {
-		fmt.Println("fff")
 		r.Json(res, 200, "containers")
 	})
 	r.Listen(fmt.Sprintf(":%s", os.Getenv("PORT")))

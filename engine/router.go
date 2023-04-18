@@ -1,7 +1,9 @@
 package engine
 
 import (
+	database "application/database"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -65,6 +67,7 @@ type Router struct {
 	env           map[string]string
 	mwPreHandlers map[string][]RouterMwConfig
 	mwPriority    int64
+	Engine        *database.Engine
 }
 
 func (r *Router) Status(res http.ResponseWriter, statusCode int) *Router {
@@ -105,9 +108,10 @@ func (r *Router) NotFound(res http.ResponseWriter, req *http.Request) {
 	r.Json(res, 404, map[string]string{"message": "NOT_FOUND"})
 }
 
-func NewApp() *Router {
+func NewApp(db *sql.DB, databaseName string) *Router {
 	r := &Router{}
 	r.Initialize()
+	r.Engine = database.Init(db, databaseName)
 	return r
 }
 
