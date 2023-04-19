@@ -17,6 +17,7 @@ type ModelRelation *Model
 type RelationMap map[string]ModelRelation
 type RelationInfoMap map[string]DatabaseRelationSchema
 type ColumnsMap map[string]string
+type RLSMap map[string]ColumnsMap
 
 type DatabaseRelationSchema struct {
 	Id           int64  `json:"id"`
@@ -48,6 +49,7 @@ type Model struct {
 	RelationsInfoMap RelationInfoMap
 	Indexes          []Index
 	ColumnsMap       ColumnsMap
+	RLS              RLSMap
 }
 
 type RelationCoalesceBuilder struct {
@@ -66,15 +68,8 @@ func NewModel(database string, table string) *Model {
 		Indexes:          make([]Index, 0),
 		RelationsInfoMap: make(RelationInfoMap),
 		ColumnsMap:       make(ColumnsMap),
+		RLS:              make(RLSMap),
 	}
-}
-
-func IsAggregation(alias string) bool {
-	return strings.HasSuffix(alias, "_aggregate")
-}
-
-func ClearAliasForAggregate(alias string) string {
-	return strings.Split(alias, "_aggregate")[0]
 }
 
 func (model *Model) GetModelRelationInfo(alias string) (*DatabaseRelationSchema, error) {
@@ -94,7 +89,7 @@ func (model *Model) GetModelRelation(alias string) (*Model, error) {
 	return nil, fmt.Errorf("no such relation")
 }
 
-func (model *Model) Select(body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string) (string, []interface{}) {
+func (model *Model) Select(role string, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string) (string, []interface{}) {
 	query := ``
 	args := make([]interface{}, 0)
 	if !IsEligibleModelRequestBody(body) {
@@ -110,7 +105,7 @@ func (model *Model) Select(body interface{}, depth int, idx *int, relationInfo *
 	makeQuery := func(model *Model, bodyEntities interface{}, aliasPart string) {
 		parsedBody, err := IsMapToInterface(bodyEntities)
 		currentAlias := fmt.Sprintf("_%d_%s", depth, aliasPart)
-		modelColumnsString := GetModelColumnsWithAlias(model, currentAlias)
+		modelColumnsString := model.GetModelColumnsWithAlias(role, body, currentAlias)
 
 		if _where, ok := parsedBody["_where"]; ok {
 			initialQuery := " WHERE "
@@ -168,13 +163,13 @@ func (model *Model) Select(body interface{}, depth int, idx *int, relationInfo *
 
 				if bodyRelation, err := IsMapToInterface(bodyEntities); err == nil {
 					if IsAggregation(key) {
-						queryStr, queryArgs := relatedModel.SelectAggregate(bodyRelation[key], depth+1, idx, relatedModelInfo, currentAlias, key)
+						queryStr, queryArgs := relatedModel.SelectAggregate(role, bodyRelation[key], depth+1, idx, relatedModelInfo, currentAlias, key)
 						relationQueryAlias := fmt.Sprintf("_%d_%s", depth+1, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, key, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
 						args = append(args, queryArgs...)
 					} else {
-						queryStr, queryArgs := relatedModel.Select(bodyRelation[key], depth+1, idx, relatedModelInfo, currentAlias)
+						queryStr, queryArgs := relatedModel.Select(role, bodyRelation[key], depth+1, idx, relatedModelInfo, currentAlias)
 						relationQueryAlias := fmt.Sprintf("_%d_%s", depth+1, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, relatedModelInfo.Alias, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
@@ -193,7 +188,7 @@ func (model *Model) Select(body interface{}, depth int, idx *int, relationInfo *
 	return query, args
 }
 
-func (model *Model) SelectAggregate(body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string, aggregation_name string) (string, []interface{}) {
+func (model *Model) SelectAggregate(role string, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string, aggregation_name string) (string, []interface{}) {
 	query := ``
 	args := make([]interface{}, 0)
 	if !IsEligibleModelRequestBody(body) {
@@ -233,7 +228,7 @@ func (model *Model) SelectAggregate(body interface{}, depth int, idx *int, relat
 		args = append(args, orderByArgs...)
 
 		// MAIN AGGREGATION JSON OBJECT BUILDER
-		queryString := model.BuildAggregate(parsedBody, currentAlias)
+		queryString := model.BuildAggregate(role, parsedBody, currentAlias)
 
 		query += fmt.Sprintf(`SELECT %s as %s FROM ( SELECT %s * FROM %s.%s %s %s %s %s %s) %s`,
 			queryString,
@@ -515,13 +510,13 @@ func (model *Model) BuildGroupBy(body interface{}, alias string) (string, []inte
 
 }
 
-func (model *Model) BuildAggregate(body interface{}, alias string) string {
+func (model *Model) BuildAggregate(role string, body interface{}, alias string) string {
 	queryParts := make([]string, 0)
-	countParts := model.BuildCountAggregate(body)
-	maxParts := model.BuildMaxAggregate(body, alias)
-	minParts := model.BuildMinAggregate(body, alias)
-	sumParts := model.BuildSumAggregate(body, alias)
-	avgParts := model.BuildAVGAggregate(body, alias)
+	countParts := model.BuildCountAggregate(role, body)
+	maxParts := model.BuildMaxAggregate(role, body, alias)
+	minParts := model.BuildMinAggregate(role, body, alias)
+	sumParts := model.BuildSumAggregate(role, body, alias)
+	avgParts := model.BuildAVGAggregate(role, body, alias)
 
 	if len(countParts) > 0 {
 		queryParts = append(queryParts, countParts)
@@ -550,7 +545,7 @@ func (model *Model) BuildAggregate(body interface{}, alias string) string {
 	return ""
 }
 
-func (model *Model) BuildCountAggregate(body interface{}) string {
+func (model *Model) BuildCountAggregate(role string, body interface{}) string {
 	parsedBody, err := IsMapToInterface(body)
 	if err != nil {
 		return ""
@@ -569,7 +564,7 @@ func (model *Model) BuildCountAggregate(body interface{}) string {
 
 }
 
-func (model *Model) BuildMinAggregate(body interface{}, alias string) string {
+func (model *Model) BuildMinAggregate(role string, body interface{}, alias string) string {
 	parsedBody, err := IsMapToInterface(body)
 	if err != nil {
 		return ""
@@ -584,12 +579,15 @@ func (model *Model) BuildMinAggregate(body interface{}, alias string) string {
 	if err != nil {
 		return ""
 	}
-
+	allowedColumns, err := model.GetAllowedColumnsMapByRole(role)
+	if err != nil {
+		return ""
+	}
 	parts := make([]string, 0)
 	for _, key := range parsedMin {
 		switch column := key.(type) {
 		case string:
-			if model.isModelColumn(column) {
+			if _, ok := allowedColumns[column]; ok {
 				parts = append(parts, fmt.Sprintf("'%s',MIN(%s.%s)", column, alias, column))
 			}
 		}
@@ -601,7 +599,7 @@ func (model *Model) BuildMinAggregate(body interface{}, alias string) string {
 	return ""
 }
 
-func (model *Model) BuildMaxAggregate(body interface{}, alias string) string {
+func (model *Model) BuildMaxAggregate(role string, body interface{}, alias string) string {
 	parsedBody, err := IsMapToInterface(body)
 	if err != nil {
 		return ""
@@ -615,13 +613,16 @@ func (model *Model) BuildMaxAggregate(body interface{}, alias string) string {
 	if err != nil {
 		return ""
 	}
-
+	allowedColumns, err := model.GetAllowedColumnsMapByRole(role)
+	if err != nil {
+		return ""
+	}
 	parts := make([]string, 0)
 
 	for _, key := range parsedMax {
 		switch column := key.(type) {
 		case string:
-			if model.isModelColumn(column) {
+			if _, ok := allowedColumns[column]; ok {
 				parts = append(parts, fmt.Sprintf("'%s',MAX(%s.%s)", column, alias, column))
 			}
 		}
@@ -633,7 +634,7 @@ func (model *Model) BuildMaxAggregate(body interface{}, alias string) string {
 	return ""
 }
 
-func (model *Model) BuildSumAggregate(body interface{}, alias string) string {
+func (model *Model) BuildSumAggregate(role string, body interface{}, alias string) string {
 	parsedBody, err := IsMapToInterface(body)
 	if err != nil {
 		return ""
@@ -647,13 +648,16 @@ func (model *Model) BuildSumAggregate(body interface{}, alias string) string {
 	if err != nil {
 		return ""
 	}
-
+	allowedColumns, err := model.GetAllowedColumnsMapByRole(role)
+	if err != nil {
+		return ""
+	}
 	parts := make([]string, 0)
 
 	for _, key := range parsedSum {
 		switch column := key.(type) {
 		case string:
-			if model.isModelColumn(column) {
+			if _, ok := allowedColumns[column]; ok {
 				parts = append(parts, fmt.Sprintf("'%s',SUM(%s.%s)", column, alias, column))
 			}
 		}
@@ -666,7 +670,7 @@ func (model *Model) BuildSumAggregate(body interface{}, alias string) string {
 	return ""
 }
 
-func (model *Model) BuildAVGAggregate(body interface{}, alias string) string {
+func (model *Model) BuildAVGAggregate(role string, body interface{}, alias string) string {
 	parsedBody, err := IsMapToInterface(body)
 	if err != nil {
 		return ""
@@ -680,13 +684,16 @@ func (model *Model) BuildAVGAggregate(body interface{}, alias string) string {
 	if err != nil {
 		return ""
 	}
-
+	allowedColumns, err := model.GetAllowedColumnsMapByRole(role)
+	if err != nil {
+		return ""
+	}
 	parts := make([]string, 0)
 
 	for _, key := range parsedAVG {
 		switch column := key.(type) {
 		case string:
-			if model.isModelColumn(column) {
+			if _, ok := allowedColumns[column]; ok {
 				parts = append(parts, fmt.Sprintf("'%s',AVG(%s.%s)", column, alias, column))
 			}
 		}
@@ -696,4 +703,60 @@ func (model *Model) BuildAVGAggregate(body interface{}, alias string) string {
 		return fmt.Sprintf("'avg',json_build_object(%s)", strings.Join(parts, ","))
 	}
 	return ""
+}
+
+func (model *Model) GetModelColumnsWithAlias(role string, body interface{}, alias string) string {
+	columns := []string{}
+	prefix := ""
+	if len(alias) > 0 {
+		prefix = fmt.Sprintf("%s.", alias)
+	}
+	parsedBody, err := IsMapToInterface(body)
+
+	hasSelect := false
+	_select := make(map[string]interface{})
+	if err == nil {
+		x, ok := parsedBody["_select"]
+
+		if ok {
+			switch y := x.(type) {
+			case map[string]interface{}:
+				if len(y) > 0 {
+					_select = y
+					hasSelect = true
+				}
+			}
+
+		}
+	}
+
+	allowedColumnsMap, err := model.GetAllowedColumnsMapByRole(role)
+	if err != nil {
+		return ""
+	}
+	for column := range allowedColumnsMap {
+		if hasSelect {
+			if _, ok := _select[column]; ok {
+				columns = append(columns, fmt.Sprintf("%s%s", prefix, column))
+
+			}
+		} else {
+			columns = append(columns, fmt.Sprintf("%s%s", prefix, column))
+		}
+	}
+
+	return strings.Join(columns, ",")
+}
+
+func (model *Model) GetAllowedColumnsMapByRole(role string) (ColumnsMap, error) {
+	allowedColumnsMap, ok := model.RLS[role]
+	if !ok && len(model.RLS) > 0 {
+		return nil, fmt.Errorf("no columns are available")
+	}
+
+	if len(model.RLS) == 0 {
+		allowedColumnsMap = model.ColumnsMap
+	}
+
+	return allowedColumnsMap, nil
 }

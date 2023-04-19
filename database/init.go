@@ -5,72 +5,117 @@ import (
 )
 
 type Engine struct {
-	Database string   `json:"database"`
-	Models   []*Model `json:"models"`
+	Databases                 []string                     `json:"databases"`
+	Database                  string                       `json:"database"`
+	Models                    []*Model                     `json:"models"`
+	DatabaseToTableToModelMap map[string]map[string]*Model `json:"schema"`
 }
 
-func Init(db *sql.DB, database string) *Engine {
-	models, err := InitializeModels(db, database)
+func Init(db *sql.DB) *Engine {
+	models, err := InitializeModels(db)
 	if err != nil {
 		panic(err)
 	}
+
+	schema := make(map[string]map[string]*Model)
+	for _, model := range models {
+		database := model.Database
+		table := model.Table
+		_, ok := schema[database]
+		if !ok {
+			schema[database] = make(map[string]*Model)
+		}
+		schema[database][table] = model
+	}
 	engine := &Engine{
-		Database: database,
-		Models:   models,
+		Models:                    models,
+		DatabaseToTableToModelMap: schema,
 	}
 	return engine
 }
 
 func (engine *Engine) Reload(db *sql.DB) {
-	models, err := InitializeModels(db, engine.Database)
+	models, err := InitializeModels(db)
 	if err != nil {
 		panic(err)
 	}
+	schema := make(map[string]map[string]*Model)
+	for _, model := range models {
+		database := model.Database
+		table := model.Table
+		_, ok := schema[database]
+		if !ok {
+			schema[database] = make(map[string]*Model)
+		}
+		schema[database][table] = model
+	}
 	engine.Models = models
+	engine.DatabaseToTableToModelMap = schema
 }
 
-func InitializeModels(db *sql.DB, database string) ([]*Model, error) {
+func InitializeModels(db *sql.DB) ([]*Model, error) {
 	relations, _ := GetEngineRelations(db)
 	var models []*Model = make([]*Model, 0)
-	tables, err := GetTableNames(db, database)
+	databases, err := GetDatabases(db)
 	if err != nil {
-		return models, err
+		panic(err)
 	}
-
-	for _, tableName := range tables {
-		columns, err := GetTableColumns(db, database, tableName)
-		if err != nil {
-			return models, err
-		}
-		indexes, err := GetTableIndexes(db, database, tableName)
+	for _, database := range databases {
+		tables, err := GetTableNames(db, database)
 		if err != nil {
 			return models, err
 		}
 
-		model := NewModel(database, tableName)
-		model.Columns = columns
-		model.Indexes = indexes
-		for _, column := range columns {
-			model.ColumnsMap[column.Name] = column.Type
-		}
+		for _, tableName := range tables {
+			columns, err := GetTableColumns(db, database, tableName)
+			if err != nil {
+				return models, err
+			}
+			indexes, err := GetTableIndexes(db, database, tableName)
+			if err != nil {
+				return models, err
+			}
 
-		models = append(models, model)
-	}
-	for _, relation := range relations {
-		for _, model := range models {
-			if model.Table == relation.FromTable {
-				relatedModel := Find(models, func(model *Model) bool {
-					return model.Table == relation.ToTable
-				})
-				if relatedModel != nil {
-					model.Relations[relation.Alias] = *relatedModel
-					model.RelationsInfoMap[relation.Alias] = relation
+			model := NewModel(database, tableName)
+			model.Columns = columns
+			model.Indexes = indexes
+			// model.RLS["ADMIN"] = ColumnsMap{"id": "int8"}
+			for _, column := range columns {
+				model.ColumnsMap[column.Name] = column.Type
+			}
+
+			models = append(models, model)
+		}
+		for _, relation := range relations {
+			for _, model := range models {
+				if model.Table == relation.FromTable {
+					relatedModel := Find(models, func(model *Model) bool {
+						return model.Table == relation.ToTable && model.Database == relation.Database
+					})
+					if relatedModel != nil {
+						model.Relations[relation.Alias] = *relatedModel
+						model.RelationsInfoMap[relation.Alias] = relation
+					}
 				}
 			}
+
 		}
 
 	}
 	return models, nil
+}
+
+func GetDatabases(db *sql.DB) ([]string, error) {
+	var database string
+	databases := []string{}
+	scanner := Query(db, GET_DATABASES)
+	cb := func(rows *sql.Rows) error {
+		err := rows.Scan(&database)
+		databases = append(databases, database)
+		return err
+	}
+	err := scanner(cb)
+	return databases, err
 }
 
 func GetTableNames(db *sql.DB, database string) ([]string, error) {

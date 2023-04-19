@@ -1,5 +1,22 @@
 package database
 
+import (
+	"fmt"
+	"strings"
+)
+
+var EXCLUDED_SCHEMAS = []string{
+	"'pg_toast'",
+	"'pg_catalog'",
+	"'information_schema'",
+	"'hdb_catalog'",
+	"'hdb_views'",
+	"'audit'",
+	"'public'",
+}
+
+var GET_DATABASES string = fmt.Sprintf(`SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN (%s) ORDER BY schema_name;`, strings.Join(EXCLUDED_SCHEMAS, ","))
+
 const GET_DATABASE_TABLES = `SELECT table_name FROM information_schema.tables WHERE table_schema = $1 ORDER BY table_name;`
 const GET_DATABASE_TABLE_COLUMN = `SELECT column_name,data_type,character_maximum_length,
 CASE WHEN is_nullable = 'NO' THEN false ELSE true END,CASE WHEN column_default IS NULL THEN NULL ELSE column_default::text END

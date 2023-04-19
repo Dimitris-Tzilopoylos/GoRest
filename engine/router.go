@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
@@ -108,10 +109,10 @@ func (r *Router) NotFound(res http.ResponseWriter, req *http.Request) {
 	r.Json(res, 404, map[string]string{"message": "NOT_FOUND"})
 }
 
-func NewApp(db *sql.DB, databaseName string) *Router {
+func NewApp(db *sql.DB) *Router {
 	r := &Router{}
 	r.Initialize()
-	r.Engine = database.Init(db, databaseName)
+	r.Engine = database.Init(db)
 	return r
 }
 
@@ -312,6 +313,10 @@ func GetUrlPath(req *http.Request) string {
 	return req.URL.Path
 }
 
+func GetAuth(req *http.Request) jwt.MapClaims {
+	return req.Context().Value("auth").(jwt.MapClaims)
+}
+
 func GetParams(req *http.Request) map[string]string {
 	params := req.Context().Value(RequestContextKey("params"))
 	if params == nil {
@@ -388,6 +393,9 @@ func (r *Router) GetHttpHandler(url string, method HttpVerb) (http.HandlerFunc, 
 
 	matchedUrl, params := r.MatchRoute(url, method, r.urlKeys[method])
 	route = r.routes[method][matchedUrl]
+	if route == nil {
+		return r.NotFound, []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
+	}
 	handler := route.handler
 	prehandlers := route.preHandlers
 

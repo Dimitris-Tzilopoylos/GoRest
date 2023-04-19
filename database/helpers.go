@@ -152,19 +152,29 @@ func GetRelationalCoalesceSymbols(model *Model, relationInfo *DatabaseRelationSc
 	return builder
 }
 
-func (e *Engine) GetModelByKey(key string) (*Model, error) {
-	model := Find(e.Models, func(model *Model) bool {
-		modelName := ClearAliasForAggregate(key)
+func (e *Engine) DatabaseExists(database string) bool {
+	_, ok := e.DatabaseToTableToModelMap[database]
 
-		return model.Table == modelName
-	})
+	return ok
+}
 
-	var err error
-	if model == nil {
-		err = fmt.Errorf("no such model %s", key)
-		return nil, err
+func (e *Engine) GetModelByKey(database, key string) (*Model, error) {
+
+	tablesMap, ok := e.DatabaseToTableToModelMap[database]
+	if !ok {
+		return nil, fmt.Errorf("no such model %s for database %s", key, database)
 	}
+	tableName := ClearAliasForAggregate(key)
+	model, ok := tablesMap[tableName]
+	if !ok {
+		return nil, fmt.Errorf("no such model %s", key)
+	}
+	return model, nil
+}
+func IsAggregation(alias string) bool {
+	return strings.HasSuffix(alias, "_aggregate")
+}
 
-	return *model, err
-
+func ClearAliasForAggregate(alias string) string {
+	return strings.Split(alias, "_aggregate")[0]
 }

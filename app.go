@@ -20,11 +20,25 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	r := engine.NewApp(db, "eshop")
+	r := engine.NewApp(db)
 
-	r.Post("/", func(res http.ResponseWriter, req *http.Request) {
+	r.Use("*", func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
+		enhancedReq, err := r.Engine.Authenticate(req)
+		if err != nil {
+			r.ErrorResponse(res, 500, err.Error())
+			return
+		}
+		req = enhancedReq
+		next(req)
+	})
+
+	r.Post("/<str:database>", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
-		x, err := r.Engine.SelectExec(db, body)
+		params := engine.GetParams(req)
+		database := params["database"]
+		auth := engine.GetAuth(req)
+		role := auth["role_name"]
+		x, err := r.Engine.SelectExec(role.(string), db, database, body)
 		if err != nil {
 			r.ErrorResponse(res, 500, err.Error())
 			return
