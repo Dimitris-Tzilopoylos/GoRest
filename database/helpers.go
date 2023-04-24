@@ -3,6 +3,8 @@ package database
 import (
 	"fmt"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func Find[T any](s []T, f func(T) bool) *T {
@@ -23,13 +25,23 @@ func IsMapToInterface(arg interface{}) (map[string]interface{}, error) {
 	}
 }
 
-func IsArray(arg interface{}) ([]interface{}, error) {
+func IsJwtMapClaims(arg interface{}) (map[string]interface{}, error) {
 	switch args := arg.(type) {
-	case []interface{}:
+	case jwt.MapClaims:
 		return args, nil
 	default:
+		return nil, fmt.Errorf("type of interface is not map[string]interface{}")
+	}
+}
+
+func IsArray(arg interface{}) ([]interface{}, error) {
+
+	x, ok := arg.([]interface{})
+	if !ok {
 		return nil, fmt.Errorf("type of interface is not []interface{}")
 	}
+
+	return x, nil
 }
 
 func IsStringArray(arg interface{}) ([]string, error) {
@@ -97,6 +109,10 @@ func IsEligibleModelRequestBody(arg interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func isEligibleInsertModelRequestBody(arg interface{}) (map[string]interface{}, error) {
+	return IsMapToInterface(arg)
 }
 
 func GetRelationalKeys(payload map[string]interface{}) []string {

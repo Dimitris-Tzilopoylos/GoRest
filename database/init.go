@@ -9,6 +9,7 @@ type Engine struct {
 	Database                  string                       `json:"database"`
 	Models                    []*Model                     `json:"models"`
 	DatabaseToTableToModelMap map[string]map[string]*Model `json:"schema"`
+	GlobalAuthEntities        []GlobalAuthEntity
 }
 
 func Init(db *sql.DB) *Engine {
@@ -30,7 +31,10 @@ func Init(db *sql.DB) *Engine {
 	engine := &Engine{
 		Models:                    models,
 		DatabaseToTableToModelMap: schema,
+		GlobalAuthEntities:        make([]GlobalAuthEntity, 0),
 	}
+
+	engine.LoadGlobalAuth(db)
 	return engine
 }
 

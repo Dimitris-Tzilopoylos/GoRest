@@ -330,13 +330,13 @@ func GetBody(req *http.Request) map[string]interface{} {
 	defer req.Body.Close()
 	if err != nil {
 		CheckError(err)
-		return nil
+		return make(map[string]interface{})
 	}
 	var msg map[string]interface{}
 	err = json.Unmarshal(body, &msg)
 	if err != nil {
 		CheckError(err)
-		return nil
+		return make(map[string]interface{})
 	}
 	return msg
 }
@@ -467,9 +467,8 @@ func (r *Router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		} else {
 			handler(res, req)
 		}
-		go (func() {
-			r.LogRequest(req, res)
-		})()
+
+		r.LogRequest(req, res)
 
 		return
 	}

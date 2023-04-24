@@ -69,3 +69,35 @@ func TransactionQuery(db *sql.DB, callback func(context.Context, *sql.Tx) error)
 	err = tx.Commit()
 	return err
 }
+
+func TransactionQueryStart(db *sql.DB) (*sql.Tx, context.Context, error) {
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	return tx, ctx, err
+}
+
+func TransactionQueryCommit(tx *sql.Tx) error {
+	return tx.Commit()
+}
+
+func TransactionQueryRollback(tx *sql.Tx) error {
+	return tx.Rollback()
+}
+
+func TransactionQueryExec(ctx context.Context, db *sql.DB, callback func(context.Context, *sql.Tx) error) error {
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	err = callback(ctx, tx)
+	if err != nil {
+		err = tx.Rollback()
+		if err != nil {
+			return err
+		}
+		return err
+	}
+	err = tx.Commit()
+	return err
+}

@@ -1,10 +1,19 @@
 package database
 
 import (
+	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
 
+type JSONB json.RawMessage
+type JSON json.RawMessage
+type JSONColumn interface{}
 type Column struct {
 	Name         string `json:"name"`
 	Type         string `json:"type"`
@@ -19,6 +28,11 @@ type RelationInfoMap map[string]DatabaseRelationSchema
 type ColumnsMap map[string]string
 type RLSMap map[string]ColumnsMap
 
+type InsertionResult struct {
+	LastInsertId any
+	RowsAffected any
+	Returning    any
+}
 type DatabaseRelationSchema struct {
 	Id           int64  `json:"id"`
 	Alias        string `json:"alias"`
@@ -246,6 +260,259 @@ func (model *Model) SelectAggregate(role string, body interface{}, depth int, id
 
 	makeQuery(model, body, model.Table)
 	return query, args
+}
+
+func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body interface{}) (interface{}, error) {
+	query, args, err := model.InsertOneQueryBuilder(role, body, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	cb := QueryContext(ctx, tx, query, args...)
+	row, err := model.ScanOneFromReturningResult(cb)
+	if err != nil {
+		return nil, err
+	}
+
+	entry, err := IsMapToInterface(body)
+	if err == nil {
+		relations := model.GetRelationalColumnsFromPayload(entry)
+		parsedRow, parsedRowErr := IsMapToInterface(row)
+		if parsedRowErr != nil {
+			return nil, parsedRowErr
+		}
+		for _, key := range relations {
+			relatedModel, err := model.GetModelRelation(key)
+			if err != nil {
+				return nil, err
+			}
+			relationalInfo, err := model.GetModelRelationInfo(key)
+			if err != nil {
+				return nil, err
+			}
+			parsedBody, err := IsMapToInterface(body)
+			if err != nil {
+				return nil, err
+			}
+
+			relationalInput, ok := parsedBody[key]
+
+			if !ok {
+				return nil, fmt.Errorf("malformed insertion")
+			}
+
+			parsedRelationalInput, err := IsMapToInterface(relationalInput)
+
+			if err != nil {
+				return nil, err
+			}
+
+			objects, ok := parsedRelationalInput["objects"]
+
+			if !ok {
+				return nil, fmt.Errorf("malformed insertion")
+			}
+
+			parsedObjects, err := IsArray(objects)
+
+			if err != nil {
+				return nil, err
+			}
+
+			relationalResults := make([]interface{}, 0)
+			for _, input := range parsedObjects {
+
+				parsedInput, err := IsMapToInterface(input)
+				if err != nil {
+					return nil, err
+				}
+				if parsedRowErr == nil {
+					value, ok := parsedRow[relationalInfo.FromColumn]
+					if ok {
+						parsedInput[relationalInfo.ToColumn] = value
+						result, err := relatedModel.Insert(role, ctx, tx, parsedInput)
+						if err != nil {
+							return nil, err
+						}
+						relationalResults = append(relationalResults, result)
+					} else {
+						return nil, fmt.Errorf("could not enhance entry with relational column")
+					}
+				} else {
+					return nil, fmt.Errorf("could not enhance entry with relational column")
+				}
+			}
+			parsedRow[key] = relationalResults
+
+		}
+	}
+	// insertionResult := InsertionResult{
+	// 	LastInsertId: lastInsertId,
+	// 	RowsAffected: affectedRows,
+	// }
+	return row, nil
+}
+
+func (model *Model) InsertOneQueryBuilder(role string, body interface{}, onConflict interface{}) (string, []interface{}, error) {
+	query := "INSERT INTO %s.%s(%s) VALUES(%s) RETURNING *"
+	args := make([]interface{}, 0)
+	parsedBody, err := isEligibleInsertModelRequestBody(body)
+	if err != nil {
+		return query, args, fmt.Errorf("invalid body provided")
+	}
+
+	allowedColumns, err := model.GetAllowedColumnsMapByRole(role)
+	if err != nil {
+		return query, args, err
+	}
+	columnsParts := make([]string, 0)
+	valuesParts := make([]string, 0)
+	idx := 1
+	flag := false
+	for key := range parsedBody {
+		_, exists := allowedColumns[key]
+		if _, ok := parsedBody[key]; ok && exists {
+			columnsParts = append(columnsParts, key)
+			valuesParts = append(valuesParts, fmt.Sprintf("$%d", idx))
+			value, err := model.GetArgumentValueByColumnType(parsedBody[key], key)
+			if err != nil {
+				return query, args, err
+			}
+			args = append(args, value)
+			idx += 1
+			flag = true
+		}
+	}
+
+	if !flag {
+		return query, args, fmt.Errorf("nothing to insert here")
+	}
+	query = fmt.Sprintf(query, model.Database, model.Table, strings.Join(columnsParts, ","), strings.Join(valuesParts, ","))
+	return query, args, nil
+}
+
+func (model *Model) Update(role string, ctx context.Context, tx *sql.Tx, body interface{}) ([]interface{}, error) {
+	parsedBody, err := IsMapToInterface(body)
+	if err != nil {
+		return nil, err
+	}
+
+	_set, ok := parsedBody["_set"]
+	if !ok {
+		return nil, fmt.Errorf("no updste input was provided")
+	}
+	parsedSet, err := IsMapToInterface(_set)
+	if err != nil {
+		return nil, err
+	}
+	query := fmt.Sprintf(`UPDATE %s.%s SET `, model.Database, model.Table)
+	columnParts := make([]string, 0)
+	args := make([]interface{}, 0)
+	idx := 1
+	for key, value := range parsedSet {
+		if _, ok := model.ColumnsMap[key]; ok {
+			columnParts = append(columnParts, fmt.Sprintf("%s = $%d", key, idx))
+			idx += 1
+			transformedValue, err := model.GetArgumentValueByColumnType(value, key)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value provided")
+			}
+			args = append(args, transformedValue)
+		}
+	}
+
+	if len(columnParts) == 0 {
+		return nil, fmt.Errorf("invalid update input")
+	}
+
+	query += fmt.Sprintf(" %s ", strings.Join(columnParts, ", "))
+
+	var _where any
+	if err == nil {
+		where, ok := parsedBody["_where"]
+		if ok {
+			_where = where
+		}
+	}
+	whereClause, whereArgs := model.BuildWhereClause(_where, model.Table, &idx, " WHERE ", "")
+	args = append(args, whereArgs...)
+	query += fmt.Sprintf(" %s RETURNING * ", whereClause)
+
+	cb := QueryContext(ctx, tx, query, args...)
+	return model.ScanManyFromReturningResult(cb)
+}
+
+func (model *Model) Delete(role string, ctx context.Context, tx *sql.Tx, body interface{}) ([]interface{}, error) {
+	query := fmt.Sprintf(`DELETE FROM %s.%s`, model.Database, model.Table)
+	idx := 1
+	parsedBody, err := IsMapToInterface(body)
+	var _where any
+	if err == nil {
+		where, ok := parsedBody["_where"]
+		if ok {
+			_where = where
+		}
+	}
+	whereClause, args := model.BuildWhereClause(_where, model.Table, &idx, " WHERE ", "")
+	query += fmt.Sprintf(" %s RETURNING *", whereClause)
+	cb := QueryContext(ctx, tx, query, args...)
+	return model.ScanManyFromReturningResult(cb)
+}
+
+func (model *Model) ScanOneFromReturningResult(cb func(func(rows *sql.Rows) error) error) (any, error) {
+	row := make(map[string]any)
+	scanner := func(rows *sql.Rows) error {
+		cols, err := rows.Columns()
+		if err != nil {
+			return err
+		}
+		values := make([]interface{}, len(cols))
+		ptrs := make([]interface{}, len(cols))
+		for i := range values {
+			ptrs[i] = &values[i]
+		}
+		err = rows.Scan(ptrs...)
+		if err != nil {
+			return err
+		}
+		for i, col := range cols {
+			row[col] = values[i]
+		}
+		return nil
+	}
+
+	err := cb(scanner)
+
+	return row, err
+}
+
+func (model *Model) ScanManyFromReturningResult(cb func(func(rows *sql.Rows) error) error) ([]any, error) {
+	results := make([]interface{}, 0)
+	scanner := func(rows *sql.Rows) error {
+		row := make(map[string]any)
+		cols, err := rows.Columns()
+		if err != nil {
+			return err
+		}
+		values := make([]interface{}, len(cols))
+		ptrs := make([]interface{}, len(cols))
+		for i := range values {
+			ptrs[i] = &values[i]
+		}
+		err = rows.Scan(ptrs...)
+		if err != nil {
+			return err
+		}
+		for i, col := range cols {
+			row[col] = values[i]
+		}
+		results = append(results, row)
+		return nil
+	}
+
+	err := cb(scanner)
+
+	return results, err
 }
 
 func (model *Model) isModelColumn(key string) bool {
@@ -759,4 +1026,40 @@ func (model *Model) GetAllowedColumnsMapByRole(role string) (ColumnsMap, error) 
 	}
 
 	return allowedColumnsMap, nil
+}
+
+func (model *Model) GetArgumentValueByColumnType(value interface{}, key string) (interface{}, error) {
+	columnType, ok := model.ColumnsMap[key]
+	if !ok {
+		return nil, fmt.Errorf("invalid column %s for parsed value", key)
+	}
+
+	if strings.HasSuffix(columnType, "[]") {
+		return pq.Array(value), nil
+	}
+
+	switch columnType {
+	case "json":
+	case "jsonb":
+		parsedValue, err := json.Marshal(value)
+		if err != nil {
+			return value, err
+		}
+		return parsedValue, nil
+	default:
+		break
+	}
+	return value, nil
+}
+
+func (model *Model) GetRelationalColumnsFromPayload(payload map[string]interface{}) []string {
+	relations := make([]string, 0)
+	for key := range payload {
+		_, err := model.GetModelRelationInfo(key)
+		if err == nil {
+			relations = append(relations, key)
+		}
+	}
+
+	return relations
 }

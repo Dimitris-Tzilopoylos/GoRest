@@ -61,6 +61,175 @@ func (e *Engine) SelectExec(role string, db *sql.DB, database string, body inter
 	return response, nil
 }
 
-func (e *Engine) InsertExec(db *sql.DB, body interface{}) {
+func (e *Engine) InsertExec(role string, db *sql.DB, database string, body interface{}) (interface{}, error) {
+	databaseExists := e.DatabaseExists(database)
+	if !databaseExists {
+		return nil, fmt.Errorf("database %s doesn't exist", database)
+	}
+	results := make(map[string][]interface{})
+	args, err := IsMapToInterface(body)
+	if err != nil {
+		return []byte{}, err
+	}
+	tx, ctx, err := TransactionQueryStart(db)
+	shouldRollback := new(bool)
+	*shouldRollback = true
+	defer func() {
+		if *shouldRollback {
+			err := TransactionQueryRollback(tx)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}()
+	if err != nil {
+		return nil, nil
+	}
 
+	for key, input := range args {
+		model, err := e.GetModelByKey(database, key)
+		if err != nil {
+			return []byte{}, err
+		}
+		parsedInput, err := IsMapToInterface(input)
+		if err != nil {
+			return []byte{}, err
+		}
+
+		objects, ok := parsedInput["objects"]
+		if !ok {
+			return []byte{}, fmt.Errorf("no input was found")
+		}
+
+		parsedObjects, err := IsArray(objects)
+		if err != nil {
+			return []byte{}, err
+		}
+		results[key] = make([]interface{}, 0)
+		for _, entry := range parsedObjects {
+			result, err := model.Insert(role, ctx, tx, entry)
+			if err != nil {
+				return []byte{}, err
+			}
+			results[key] = append(results[key], result)
+		}
+	}
+
+	err = TransactionQueryCommit(tx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	*shouldRollback = false
+
+	return results, nil
+}
+
+func (e *Engine) UpdateExec(role string, db *sql.DB, database string, body interface{}) (interface{}, error) {
+	databaseExists := e.DatabaseExists(database)
+
+	if !databaseExists {
+		return nil, fmt.Errorf("database %s doesn't exist", database)
+	}
+	results := make(map[string][]interface{})
+	args, err := IsMapToInterface(body)
+	if err != nil {
+		return []byte{}, err
+	}
+	tx, ctx, err := TransactionQueryStart(db)
+	shouldRollback := new(bool)
+	*shouldRollback = true
+	defer func() {
+		if *shouldRollback {
+			err := TransactionQueryRollback(tx)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}()
+	if err != nil {
+		return nil, nil
+	}
+	for key, input := range args {
+		model, err := e.GetModelByKey(database, key)
+		if err != nil {
+			return []byte{}, err
+		}
+		if err != nil {
+			return []byte{}, err
+		}
+
+		results[key] = make([]interface{}, 0)
+		result, err := model.Update(role, ctx, tx, input)
+		if err != nil {
+			return []byte{}, err
+		}
+
+		results[key] = result
+	}
+
+	err = TransactionQueryCommit(tx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	*shouldRollback = false
+
+	return results, nil
+}
+
+func (e *Engine) DeleteExec(role string, db *sql.DB, database string, body interface{}) (interface{}, error) {
+	databaseExists := e.DatabaseExists(database)
+
+	if !databaseExists {
+		return nil, fmt.Errorf("database %s doesn't exist", database)
+	}
+	results := make(map[string][]interface{})
+	args, err := IsMapToInterface(body)
+	if err != nil {
+		return []byte{}, err
+	}
+	tx, ctx, err := TransactionQueryStart(db)
+	shouldRollback := new(bool)
+	*shouldRollback = true
+	defer func() {
+		if *shouldRollback {
+			err := TransactionQueryRollback(tx)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}()
+	if err != nil {
+		return nil, nil
+	}
+	for key, input := range args {
+		model, err := e.GetModelByKey(database, key)
+		if err != nil {
+			return []byte{}, err
+		}
+		if err != nil {
+			return []byte{}, err
+		}
+
+		results[key] = make([]interface{}, 0)
+		result, err := model.Delete(role, ctx, tx, input)
+		if err != nil {
+			return []byte{}, err
+		}
+
+		results[key] = result
+	}
+
+	err = TransactionQueryCommit(tx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	*shouldRollback = false
+
+	return results, nil
 }
