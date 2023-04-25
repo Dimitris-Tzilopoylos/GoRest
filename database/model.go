@@ -177,14 +177,16 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 
 				if bodyRelation, err := IsMapToInterface(bodyEntities); err == nil {
 					if IsAggregation(key) {
-						queryStr, queryArgs := relatedModel.SelectAggregate(role, bodyRelation[key], depth+1, idx, relatedModelInfo, currentAlias, key)
-						relationQueryAlias := fmt.Sprintf("_%d_%s", depth+1, relatedModel.Table)
+						depth = depth + 1
+						queryStr, queryArgs := relatedModel.SelectAggregate(role, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias, key)
+						relationQueryAlias := fmt.Sprintf("_%d_%s", depth, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, key, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
 						args = append(args, queryArgs...)
 					} else {
-						queryStr, queryArgs := relatedModel.Select(role, bodyRelation[key], depth+1, idx, relatedModelInfo, currentAlias)
-						relationQueryAlias := fmt.Sprintf("_%d_%s", depth+1, relatedModel.Table)
+						depth = depth + 1
+						queryStr, queryArgs := relatedModel.Select(role, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias)
+						relationQueryAlias := fmt.Sprintf("_%d_%s", depth, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, relatedModelInfo.Alias, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
 						args = append(args, queryArgs...)
@@ -198,7 +200,10 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 	makeQuery(model, body, model.Table)
 	query += fmt.Sprintf(") _%d_%s", depth, model.Table)
 	query = fmt.Sprintf(query, "")
+	if depth == 0 {
+		fmt.Println(query)
 
+	}
 	return query, args
 }
 
@@ -434,10 +439,14 @@ func (model *Model) Update(role string, ctx context.Context, tx *sql.Tx, body in
 			_where = where
 		}
 	}
-	whereClause, whereArgs := model.BuildWhereClause(_where, model.Table, &idx, " WHERE ", "")
-	args = append(args, whereArgs...)
-	query += fmt.Sprintf(" %s RETURNING * ", whereClause)
+	whereClause, whereArgs := model.BuildWhereClause(_where, model.Table, &idx, "", "")
+	if len(whereClause) > 0 {
+		args = append(args, whereArgs...)
+		query += fmt.Sprintf(" WHERE %s ", whereClause)
+	}
 
+	query += " RETURNING * "
+	fmt.Println(query)
 	cb := QueryContext(ctx, tx, query, args...)
 	return model.ScanManyFromReturningResult(cb)
 }
@@ -453,8 +462,11 @@ func (model *Model) Delete(role string, ctx context.Context, tx *sql.Tx, body in
 			_where = where
 		}
 	}
-	whereClause, args := model.BuildWhereClause(_where, model.Table, &idx, " WHERE ", "")
-	query += fmt.Sprintf(" %s RETURNING *", whereClause)
+	whereClause, args := model.BuildWhereClause(_where, model.Table, &idx, "", "")
+	if len(whereClause) > 0 {
+		query += fmt.Sprintf(" WHERE %s ", whereClause)
+	}
+	query += " RETURNING * "
 	cb := QueryContext(ctx, tx, query, args...)
 	return model.ScanManyFromReturningResult(cb)
 }

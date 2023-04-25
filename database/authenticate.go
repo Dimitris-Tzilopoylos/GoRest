@@ -149,7 +149,7 @@ func (e *Engine) Login(role string, db *sql.DB, payload LoginPayload) (string, e
 	for key, value := range userEntity {
 		claims[key] = value
 	}
-	claims["exp"] = GetExpirationTimeForToken(2)
+	claims["exp"] = GetExpirationTimeForToken(60)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenString, err := token.SignedString(GetSecret())
