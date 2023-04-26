@@ -24,7 +24,7 @@ func main() {
 	}
 	defer db.Close()
 	r := engine.NewApp(db, entryPoint)
-
+	defer r.Logger.Sync()
 	AuthMW := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
 		enhancedReq, err := r.Engine.Authenticate(req)
 		if err != nil {

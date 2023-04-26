@@ -2,6 +2,7 @@ package engine
 
 import (
 	database "application/database"
+	"application/environment"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -63,14 +64,15 @@ type RouterMwConfig struct {
 }
 
 type Router struct {
-	entryUrl      string
-	routes        map[HttpVerb]map[string]*Route
-	urlKeys       map[HttpVerb][]string
-	env           map[string]string
-	mwPreHandlers map[string][]RouterMwConfig
-	mwPriority    int64
-	Engine        *database.Engine
-	Logger        *zap.Logger
+	entryUrl          string
+	routes            map[HttpVerb]map[string]*Route
+	urlKeys           map[HttpVerb][]string
+	mwPreHandlers     map[string][]RouterMwConfig
+	mwPriority        int64
+	Engine            *database.Engine
+	Logger            *zap.Logger
+	EnableHttpLogging bool
+	EnableSQLLogging  bool
 }
 
 func (r *Router) Status(res http.ResponseWriter, statusCode int) *Router {
@@ -120,10 +122,11 @@ func NewApp(db *sql.DB, entryUrl string) *Router {
 
 func (r *Router) Initialize(entryUrl string) {
 	logger, err := zap.NewProduction()
-
 	if err != nil {
 		panic(err)
 	}
+	r.EnableHttpLogging = environment.GetEnvValue("HTTP_LOGGER") == "ON"
+	r.EnableSQLLogging = environment.GetEnvValue("SQL_LOGGER") == "ON"
 	r.Logger = logger
 	r.entryUrl = entryUrl
 	r.routes = make(map[HttpVerb]map[string]*Route)
@@ -490,8 +493,9 @@ func (r *Router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		} else {
 			handler(res, req)
 		}
-
-		// r.LogRequest(req, res)
+		if r.EnableHttpLogging {
+			r.LogRequest(req, res)
+		}
 
 		return
 	}
