@@ -1,6 +1,7 @@
 package database
 
 import (
+	environment "application/environment"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -37,7 +38,7 @@ type GlobalAuthEntity struct {
 }
 
 func GetSecret() []byte {
-	secret := "flsdjhgfsjdkhgskjdhfjksdhgds"
+	secret := environment.GetEnvValue("JWT_SECRET")
 	return []byte(secret)
 }
 

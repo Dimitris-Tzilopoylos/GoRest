@@ -207,9 +207,7 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 	makeQuery(model, body, model.Table)
 	query += fmt.Sprintf(") _%d_%s", depth, model.Table)
 	query = fmt.Sprintf(query, "")
-	if depth == 0 {
-		fmt.Println(query)
-	}
+
 	return query, args
 }
 
@@ -516,7 +514,18 @@ func (model *Model) ScanOneFromReturningResult(cb func(func(rows *sql.Rows) erro
 			return err
 		}
 		for i, col := range cols {
-			row[col] = values[i]
+			if columnType, ok := model.ColumnsMap[col]; ok {
+				if columnType == "json" || columnType == "jsonb" {
+					var val any
+					x, ok := values[i].([]byte)
+					if ok {
+						json.Unmarshal(x, &val)
+						row[col] = val
+						continue
+					}
+				}
+				row[col] = values[i]
+			}
 		}
 		return nil
 	}
@@ -544,7 +553,18 @@ func (model *Model) ScanManyFromReturningResult(cb func(func(rows *sql.Rows) err
 			return err
 		}
 		for i, col := range cols {
-			row[col] = values[i]
+			if columnType, ok := model.ColumnsMap[col]; ok {
+				if columnType == "json" || columnType == "jsonb" {
+					var val any
+					x, ok := values[i].([]byte)
+					if ok {
+						json.Unmarshal(x, &val)
+						row[col] = val
+						continue
+					}
+				}
+				row[col] = values[i]
+			}
 		}
 		results = append(results, row)
 		return nil
@@ -724,7 +744,6 @@ func (model *Model) BuildRelationalWhereAggregate(relationWhereAggregate Relatio
 				return queryString, args
 			}
 			operatorKey, parsedPayload, err := GetFirstKeyFromMap(data[column])
-			fmt.Println(operatorKey)
 			if err != nil {
 				return queryString, args
 			}
@@ -840,6 +859,19 @@ func (model *Model) BuildOrderBy(body interface{}, alias string, idx *int) (stri
 					parts = append(parts, fmt.Sprintf("%s %s", key, direction))
 				}
 			}
+			// if model.isRelationColumn(key) {
+			// 	relatedModel,err := model.GetModelRelation(key)
+			// 	if err != nil {
+			// 		return queryString,args
+			// 	}
+			// 	relatedModelInfo,err := model.GetModelRelationInfo(key)
+			// 	if err != nil {
+			// 		return queryString,args
+			// 	}
+			// 	orderByQuery,newArgs := relatedModel.BuildOrderBy(value,relatedModel.Table,idx)
+			// 		args = append(args, newArgs...)
+			// 	query := fmt.Sprintf("( SELECT )")
+			// }
 		}
 
 	}

@@ -3,17 +3,19 @@ package main
 import (
 	database "application/database"
 	engine "application/engine"
+	environment "application/environment"
 	"database/sql"
-	"fmt"
 	"net/http"
-	"os"
 
 	_ "github.com/lib/pq"
 )
 
 func main() {
+	environment.LoadEnv()
+	connStr := environment.GetEnvValue("CONNECTION_STRING")
+	entryPoint := environment.GetEnvValue("ROUTER_ENTRY_POINT")
+	port := environment.GetEnvValue("PORT")
 
-	connStr := "postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	db.SetMaxOpenConns(70)
 	db.SetMaxIdleConns(70)
@@ -21,8 +23,8 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	r := engine.NewApp(db)
-	// defer r.Logger.Sync()
+	r := engine.NewApp(db, entryPoint)
+
 	AuthMW := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
 		enhancedReq, err := r.Engine.Authenticate(req)
 		if err != nil {
@@ -164,6 +166,5 @@ func main() {
 
 	})
 
-	r.Listen(fmt.Sprintf(":%s", os.Getenv("PORT")))
-	// PARAMS are defined in routes as <type:name>
+	r.Listen(port)
 }

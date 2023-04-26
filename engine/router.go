@@ -17,7 +17,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
@@ -64,6 +63,7 @@ type RouterMwConfig struct {
 }
 
 type Router struct {
+	entryUrl      string
 	routes        map[HttpVerb]map[string]*Route
 	urlKeys       map[HttpVerb][]string
 	env           map[string]string
@@ -111,24 +111,23 @@ func (r *Router) NotFound(res http.ResponseWriter, req *http.Request) {
 	r.Json(res, 404, map[string]string{"message": "NOT_FOUND"})
 }
 
-func NewApp(db *sql.DB) *Router {
+func NewApp(db *sql.DB, entryUrl string) *Router {
 	r := &Router{}
-	r.Initialize()
+	r.Initialize(entryUrl)
 	r.Engine = database.Init(db)
 	return r
 }
 
-func (r *Router) Initialize() {
+func (r *Router) Initialize(entryUrl string) {
 	logger, err := zap.NewProduction()
 
 	if err != nil {
 		panic(err)
 	}
 	r.Logger = logger
-
+	r.entryUrl = entryUrl
 	r.routes = make(map[HttpVerb]map[string]*Route)
 	r.urlKeys = make(map[HttpVerb][]string)
-	godotenv.Load(".env")
 	r.mwPreHandlers = make(map[string][]RouterMwConfig)
 	r.mwPriority = 0
 	for _, httpVerb := range HttpVerbsSlice {
@@ -186,25 +185,21 @@ func buildRegexUrlPath(url string) (string, map[string]HttpParam) {
 	return regex, params
 }
 
-func (r *Router) isRouterIdle() bool {
-
-	for _, urlMapToConfig := range r.routes {
-		if len(urlMapToConfig) > 0 {
-			return false
-		}
+func (r *Router) GetUrlWithEntryRoute(url string) string {
+	if len(r.entryUrl) > 0 {
+		return fmt.Sprintf("%s%s", r.entryUrl, url)
 	}
 
-	return true
+	return url
 }
 
 func (r *Router) Use(url string, handler func(res http.ResponseWriter, req *http.Request, next func(req *http.Request))) {
-
+	url = r.GetUrlWithEntryRoute(url)
 	if _, ok := r.mwPreHandlers[url]; !ok {
 		r.mwPreHandlers[url] = make([]RouterMwConfig, 0)
 	}
 	r.mwPreHandlers[url] = append(r.mwPreHandlers[url], RouterMwConfig{handler: handler, priority: r.mwPriority})
 	r.mwPriority += 1
-
 }
 
 func (r *Router) deriveMiddlewarePreHandlersForRoute(url string) []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
@@ -226,7 +221,7 @@ func (r *Router) deriveMiddlewarePreHandlersForRoute(url string) []func(res http
 }
 
 func (r *Router) Get(url string, handler http.HandlerFunc) {
-
+	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
 	(*r).routes[GET][url] = &Route{
 		path:        url,
@@ -238,6 +233,7 @@ func (r *Router) Get(url string, handler http.HandlerFunc) {
 }
 
 func (r *Router) Post(url string, handler http.HandlerFunc) {
+	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
 	(*r).routes[POST][url] = &Route{
 		path:        url,
@@ -249,6 +245,7 @@ func (r *Router) Post(url string, handler http.HandlerFunc) {
 }
 
 func (r *Router) Put(url string, handler http.HandlerFunc) {
+	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
 	(*r).routes[PUT][url] = &Route{
 		path:        url,
@@ -260,6 +257,7 @@ func (r *Router) Put(url string, handler http.HandlerFunc) {
 }
 
 func (r *Router) Patch(url string, handler http.HandlerFunc) {
+	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
 	(*r).routes[PATCH][url] = &Route{
 		path:        url,
@@ -271,6 +269,7 @@ func (r *Router) Patch(url string, handler http.HandlerFunc) {
 }
 
 func (r *Router) Delete(url string, handler http.HandlerFunc) {
+	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
 	(*r).routes[DELETE][url] = &Route{
 		path:        url,
@@ -510,7 +509,7 @@ func (r *Router) populateUrlKeys() {
 func (r *Router) Listen(port string) {
 	r.populateUrlKeys()
 	server := &http.Server{
-		Addr:         port,
+		Addr:         fmt.Sprintf(":%s", port),
 		Handler:      r,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
