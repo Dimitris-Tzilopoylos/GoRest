@@ -22,6 +22,13 @@ type Column struct {
 	DefaultValue string `json:"default_value"`
 }
 
+type RelationWhereAggregate struct {
+	alias    string
+	modelKey string
+	body     interface{}
+	binder   string
+}
+
 type ModelRelation *Model
 type RelationMap map[string]ModelRelation
 type RelationInfoMap map[string]DatabaseRelationSchema
@@ -202,7 +209,6 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 	query = fmt.Sprintf(query, "")
 	if depth == 0 {
 		fmt.Println(query)
-
 	}
 	return query, args
 }
@@ -404,7 +410,7 @@ func (model *Model) Update(role string, ctx context.Context, tx *sql.Tx, body in
 
 	_set, ok := parsedBody["_set"]
 	if !ok {
-		return nil, fmt.Errorf("no updste input was provided")
+		_set = make(map[string]interface{})
 	}
 	parsedSet, err := IsMapToInterface(_set)
 	if err != nil {
@@ -424,6 +430,29 @@ func (model *Model) Update(role string, ctx context.Context, tx *sql.Tx, body in
 			}
 			args = append(args, transformedValue)
 		}
+	}
+
+	for operator, symbol := range UPDATE_SELF_REFERENCING_OPERATORS {
+		payload, ok := parsedBody[operator]
+		if !ok {
+			continue
+		}
+		parsedPayload, err := IsMapToInterface(payload)
+		if err != nil {
+			return nil, err
+		}
+		for key, value := range parsedPayload {
+			if _, ok := model.ColumnsMap[key]; ok {
+				columnParts = append(columnParts, fmt.Sprintf("%s = %s %s $%d", key, key, symbol, idx))
+				idx += 1
+				transformedValue, err := model.GetArgumentValueByColumnType(value, key)
+				if err != nil {
+					return nil, fmt.Errorf("invalid value provided")
+				}
+				args = append(args, transformedValue)
+			}
+		}
+
 	}
 
 	if len(columnParts) == 0 {
@@ -446,7 +475,6 @@ func (model *Model) Update(role string, ctx context.Context, tx *sql.Tx, body in
 	}
 
 	query += " RETURNING * "
-	fmt.Println(query)
 	cb := QueryContext(ctx, tx, query, args...)
 	return model.ScanManyFromReturningResult(cb)
 }
@@ -591,9 +619,7 @@ func (model *Model) BuildWhereClause(body interface{}, alias string, idx *int, i
 						args = append(args, value)
 					}
 					*idx += 1
-
 				}
-
 			} else if model.isRelationColumnWithAggregation(key) {
 				qBinder := binder
 				if len(queryString) > len(initialQuery) {
@@ -601,18 +627,14 @@ func (model *Model) BuildWhereClause(body interface{}, alias string, idx *int, i
 						qBinder = "AND"
 					}
 				}
-				referencedModel, _ := model.GetModelRelation(key)
-				referencedModelInfo, _ := model.GetModelRelationInfo(key)
-				query, newArgs := referencedModel.BuildWhereClause(value, referencedModelInfo.ToTable, idx, "WHERE", "")
-				queryString += fmt.Sprintf(" %s %s.%s IN ( SELECT %s FROM %s.%s %s)",
-					qBinder,
-					alias,
-					referencedModelInfo.FromColumn,
-					referencedModelInfo.ToColumn,
-					referencedModelInfo.Database,
-					referencedModelInfo.ToTable,
-					query,
-				)
+				relationWhereAggregate := RelationWhereAggregate{
+					binder:   qBinder,
+					body:     value,
+					modelKey: key,
+					alias:    alias,
+				}
+				query, newArgs := model.BuildRelationalWhereAggregate(relationWhereAggregate, idx)
+				queryString += query
 				args = append(args, newArgs...)
 			} else if model.isRelationColumn(key) {
 				qBinder := binder
@@ -638,6 +660,115 @@ func (model *Model) BuildWhereClause(body interface{}, alias string, idx *int, i
 			}
 		}
 	}
+	return queryString, args
+}
+
+func (model *Model) BuildRelationalWhereAggregate(relationWhereAggregate RelationWhereAggregate, idx *int) (string, []interface{}) {
+	args := make([]interface{}, 0)
+	queryString := ""
+	qBinder := relationWhereAggregate.binder
+
+	referencedModelInfo, _ := model.GetModelRelationInfo(relationWhereAggregate.modelKey)
+	aggreStr := ""
+	parsedValue, err := IsMapToInterface(relationWhereAggregate.body)
+
+	if err != nil {
+		return queryString, args
+	}
+	if len(parsedValue) <= 0 {
+		return queryString, args
+	}
+
+	if len(qBinder) == 0 {
+		qBinder = "AND"
+	}
+
+	for aggregationKey, payload := range parsedValue {
+
+		if _, ok := AGGREGATION_KEYS[aggregationKey]; !ok {
+			return queryString, args
+		}
+		if aggregationKey == "_count" {
+			operatorKey, parsedPayload, err := GetFirstKeyFromMap(payload)
+			if err != nil {
+				return queryString, args
+			}
+			operator, ok := WHERE_CLAUSE_KEYS[operatorKey]
+			if !ok {
+				return queryString, args
+			}
+			aggreStr += fmt.Sprintf(" %s (SELECT COUNT(*) FROM %s.%s WHERE %s.%s = %s.%s) %s $%d",
+				qBinder,
+				referencedModelInfo.Database,
+				referencedModelInfo.ToTable,
+				relationWhereAggregate.alias,
+				referencedModelInfo.FromColumn,
+				referencedModelInfo.ToTable,
+				referencedModelInfo.ToColumn,
+				operator,
+				*idx,
+			)
+
+			parsedValue, ok := parsedPayload[operatorKey]
+			if !ok {
+				return queryString, args
+			}
+			args = append(args, parsedValue)
+			*idx += 1
+		} else {
+			column, data, err := GetFirstKeyFromMap(payload)
+			if err != nil {
+				return queryString, args
+			}
+			if !model.isModelColumn(column) {
+				return queryString, args
+			}
+			operatorKey, parsedPayload, err := GetFirstKeyFromMap(data[column])
+			fmt.Println(operatorKey)
+			if err != nil {
+				return queryString, args
+			}
+			operator, ok := WHERE_CLAUSE_KEYS[operatorKey]
+			if !ok {
+				return queryString, args
+			}
+
+			aggreStr += fmt.Sprintf(" %s (SELECT %s(%s) FROM %s.%s WHERE %s.%s = %s.%s ) %s $%d",
+				qBinder,
+				AGGREGATION_KEYS[aggregationKey],
+				column,
+				referencedModelInfo.Database,
+				referencedModelInfo.ToTable,
+				relationWhereAggregate.alias,
+				referencedModelInfo.FromColumn,
+				referencedModelInfo.ToTable,
+				referencedModelInfo.ToColumn,
+				operator,
+				*idx,
+			)
+
+			parsedValue, ok := parsedPayload[operatorKey]
+			if !ok {
+				return queryString, args
+			}
+			args = append(args, parsedValue)
+			*idx += 1
+		}
+
+	}
+	queryString += fmt.Sprintf(" %s %s.%s IN ( SELECT %s FROM %s.%s WHERE %s.%s = %s.%s %s )",
+		relationWhereAggregate.binder,
+		relationWhereAggregate.alias,
+		referencedModelInfo.FromColumn,
+		referencedModelInfo.ToColumn,
+		referencedModelInfo.Database,
+		referencedModelInfo.ToTable,
+		relationWhereAggregate.alias,
+		referencedModelInfo.FromColumn,
+		referencedModelInfo.ToTable,
+		referencedModelInfo.ToColumn,
+		aggreStr,
+	)
 	return queryString, args
 }
 
@@ -790,6 +921,41 @@ func (model *Model) BuildGroupBy(body interface{}, alias string) (string, []inte
 }
 
 func (model *Model) BuildAggregate(role string, body interface{}, alias string) string {
+	queryParts := make([]string, 0)
+	countParts := model.BuildCountAggregate(role, body)
+	maxParts := model.BuildMaxAggregate(role, body, alias)
+	minParts := model.BuildMinAggregate(role, body, alias)
+	sumParts := model.BuildSumAggregate(role, body, alias)
+	avgParts := model.BuildAVGAggregate(role, body, alias)
+
+	if len(countParts) > 0 {
+		queryParts = append(queryParts, countParts)
+	}
+
+	if len(maxParts) > 0 {
+		queryParts = append(queryParts, maxParts)
+	}
+
+	if len(minParts) > 0 {
+		queryParts = append(queryParts, minParts)
+	}
+
+	if len(sumParts) > 0 {
+		queryParts = append(queryParts, sumParts)
+	}
+
+	if len(avgParts) > 0 {
+		queryParts = append(queryParts, avgParts)
+	}
+
+	if len(queryParts) > 0 {
+		return fmt.Sprintf("json_build_object(%s)", strings.Join(queryParts, ","))
+	}
+
+	return ""
+}
+
+func (model *Model) BuildAggregateForHaving(role string, body interface{}, alias string) string {
 	queryParts := make([]string, 0)
 	countParts := model.BuildCountAggregate(role, body)
 	maxParts := model.BuildMaxAggregate(role, body, alias)

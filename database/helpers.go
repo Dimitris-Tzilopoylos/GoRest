@@ -194,3 +194,37 @@ func IsAggregation(alias string) bool {
 func ClearAliasForAggregate(alias string) string {
 	return strings.Split(alias, "_aggregate")[0]
 }
+
+func ProcessEntryIsSelect(entry map[string]interface{}) bool {
+	_, ok := entry["select"]
+	return ok
+}
+
+func ProcessEntryIsInsert(entry map[string]interface{}) bool {
+	_, ok := entry["insert"]
+
+	return ok
+}
+
+func ProcessEntryIsUpdate(entry map[string]interface{}) bool {
+	_, ok := entry["update"]
+	return ok
+}
+
+func ProcessEntryIsDelete(entry map[string]interface{}) bool {
+	_, ok := entry["delete"]
+	return ok
+}
+
+func GetFirstKeyFromMap(args interface{}) (string, map[string]interface{}, error) {
+	parsed, err := IsMapToInterface(args)
+	if err != nil {
+		return "", nil, nil
+	}
+
+	for key := range parsed {
+		return key, parsed, nil
+	}
+
+	return "", nil, fmt.Errorf("empty map")
+}

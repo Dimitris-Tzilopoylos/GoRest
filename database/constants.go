@@ -70,3 +70,10 @@ var ORDER_BY_KEYS map[string]string = map[string]string{
 	"DESC_NULLS_FIRST": "DESC NULLS FIRST",
 	"DESC_NULLS_LAST":  "DESC NULLS LAST",
 }
+
+var UPDATE_SELF_REFERENCING_OPERATORS = map[string]string{
+	"_inc":  " + ",
+	"_dec":  " - ",
+	"_div":  " / ",
+	"_mult": " * ",
+}

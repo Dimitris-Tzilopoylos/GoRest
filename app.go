@@ -22,7 +22,7 @@ func main() {
 	}
 	defer db.Close()
 	r := engine.NewApp(db)
-
+	// defer r.Logger.Sync()
 	AuthMW := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
 		enhancedReq, err := r.Engine.Authenticate(req)
 		if err != nil {
@@ -46,6 +46,22 @@ func main() {
 			return
 		}
 		r.Json(res, http.StatusOK, x)
+
+	})
+
+	r.Use("/<str:database>/process", AuthMW)
+	r.Post("/<str:database>/process", func(res http.ResponseWriter, req *http.Request) {
+		body := engine.GetBody(req)
+		params := engine.GetParams(req)
+		database := params["database"]
+
+		result, err := r.Engine.Process("", db, database, body)
+
+		if err != nil {
+			r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			return
+		}
+		r.Json(res, http.StatusCreated, result)
 
 	})
 

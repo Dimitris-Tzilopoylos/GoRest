@@ -18,6 +18,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 var Reset = "\033[0m"
@@ -69,6 +70,7 @@ type Router struct {
 	mwPreHandlers map[string][]RouterMwConfig
 	mwPriority    int64
 	Engine        *database.Engine
+	Logger        *zap.Logger
 }
 
 func (r *Router) Status(res http.ResponseWriter, statusCode int) *Router {
@@ -117,6 +119,13 @@ func NewApp(db *sql.DB) *Router {
 }
 
 func (r *Router) Initialize() {
+	logger, err := zap.NewProduction()
+
+	if err != nil {
+		panic(err)
+	}
+	r.Logger = logger
+
 	r.routes = make(map[HttpVerb]map[string]*Route)
 	r.urlKeys = make(map[HttpVerb][]string)
 	godotenv.Load(".env")
@@ -417,19 +426,33 @@ func (r *Router) LogRequest(w *http.Request, res http.ResponseWriter) {
 	path := GetUrlPath(w)
 	ip := GetRequestIP(w)
 	statusCode := res.Header().Get("Engine-Status-Code")
-	color := Green
+
 	statusCheck, err := strconv.Atoi(statusCode)
 	var statusText string
+
 	if err == nil {
 		statusText = http.StatusText(statusCheck)
 		if statusCheck >= 400 {
-			color = Red
+			r.Logger.Error("HTTP Request",
+				zap.String("timestamp", formattedDate),
+				zap.Any("method", method),
+				zap.String("path", path),
+				zap.String("statusCode", statusCode+" "+statusText),
+				zap.String("ip", ip),
+				zap.Any("requestId", w.Context().Value(RequestContextKey("requestId"))))
+		} else {
+			r.Logger.Info("HTTP Request",
+				zap.String("timestamp", formattedDate),
+				zap.Any("method", method),
+				zap.String("path", path),
+				zap.String("statusCode", statusCode+" "+statusText),
+				zap.String("ip", ip),
+				zap.Any("requestId", w.Context().Value(RequestContextKey("requestId"))))
 		}
 	} else {
 		ErrorRecover(err)()
 	}
-	log := fmt.Sprintf("%s [%s] [METHOD: %s] [PATH: %s ] [STATUS: %s %s] [IP: %s] %s [REQUEST ID: %s]%s", color, formattedDate, method, path, statusCode, statusText, ip, Yellow, w.Context().Value(RequestContextKey("requestId")), Reset)
-	fmt.Println(log)
+
 }
 
 func (r *Router) withRequestId(req *http.Request) *http.Request {
@@ -455,6 +478,7 @@ func (r *Router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	enableCors(&res)
 	httpMethod := GetHttpMethod(req)
 	if httpMethod == "OPTIONS" {
+		r.Json(res, 204, "")
 		return
 	}
 	req = req.WithContext(context.Background())
@@ -468,7 +492,7 @@ func (r *Router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			handler(res, req)
 		}
 
-		r.LogRequest(req, res)
+		// r.LogRequest(req, res)
 
 		return
 	}
