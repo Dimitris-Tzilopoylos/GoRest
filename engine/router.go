@@ -203,6 +203,8 @@ func (r *Router) Use(url string, handler func(res http.ResponseWriter, req *http
 	}
 	r.mwPreHandlers[url] = append(r.mwPreHandlers[url], RouterMwConfig{handler: handler, priority: r.mwPriority})
 	r.mwPriority += 1
+
+	fmt.Println(Yellow + fmt.Sprintf("Registering Middleware On %s", url) + Reset)
 }
 
 func (r *Router) deriveMiddlewarePreHandlersForRoute(url string) []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
@@ -226,6 +228,7 @@ func (r *Router) deriveMiddlewarePreHandlersForRoute(url string) []func(res http
 func (r *Router) Get(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
+	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", GET, url) + Reset)
 	(*r).routes[GET][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -238,6 +241,7 @@ func (r *Router) Get(url string, handler http.HandlerFunc) {
 func (r *Router) Post(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
+	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", POST, url) + Reset)
 	(*r).routes[POST][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -250,6 +254,7 @@ func (r *Router) Post(url string, handler http.HandlerFunc) {
 func (r *Router) Put(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
+	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", PUT, url) + Reset)
 	(*r).routes[PUT][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -262,6 +267,7 @@ func (r *Router) Put(url string, handler http.HandlerFunc) {
 func (r *Router) Patch(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
+	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", PATCH, url) + Reset)
 	(*r).routes[PATCH][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -274,6 +280,7 @@ func (r *Router) Patch(url string, handler http.HandlerFunc) {
 func (r *Router) Delete(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
+	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", DELETE, url) + Reset)
 	(*r).routes[DELETE][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -518,11 +525,14 @@ func (r *Router) Listen(port string) {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
-	fmt.Println(Cyan + fmt.Sprintf("🖥️  Server started at: http://localhost%s", port) + Reset)
+	version := environment.GetEnvValue("VERSION")
+	fmt.Println(Purple + fmt.Sprintf("GOJila Engine: %s", version) + Reset)
+	fmt.Println(Green + fmt.Sprintf("Server started at: http://localhost%s", port) + Reset)
 	err := server.ListenAndServe()
 	if err != nil {
 		panic(err.Error())
 	}
+
 }
 
 func (r *Router) EngineHandlerWithContext(handler http.HandlerFunc) http.HandlerFunc {
