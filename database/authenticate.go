@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 	"time"
@@ -134,6 +135,12 @@ func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (stri
 		return "", fmt.Errorf("no password value was provided")
 	}
 
+	_, err := ValidateAuthAction(identityValue, passwordValue)
+
+	if err != nil {
+		return "", err
+	}
+
 	body := map[string]map[string]interface{}{
 		"_where": make(map[string]interface{}),
 	}
@@ -230,9 +237,20 @@ func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (stri
 
 func (e *Engine) Register(role string, db *sql.DB, payload AuthActionPayload) (interface{}, error) {
 
+	identityValue, ok := payload.Body[payload.IdentityField]
+	if !ok {
+		return nil, fmt.Errorf("no identity value was provided")
+	}
+
 	passwordValue, ok := payload.Body[payload.PasswordField]
 	if !ok {
 		return nil, fmt.Errorf("no password value was provided")
+	}
+
+	_, err := ValidateAuthAction(identityValue, passwordValue)
+
+	if err != nil {
+		return nil, err
 	}
 
 	parsedPayload, err := IsMapToInterface(payload.Body)
@@ -248,7 +266,7 @@ func (e *Engine) Register(role string, db *sql.DB, payload AuthActionPayload) (i
 			if key == payload.PasswordField {
 				passwordValueToString, ok := passwordValue.(string)
 				if !ok {
-					return nil, fmt.Errorf("registration failed: failed to hash password field")
+					return nil, fmt.Errorf("registration failed: failed to hash password field: please provide the password as a string")
 				}
 				passwordBytes := []byte(passwordValueToString)
 				hashBytes, err := bcrypt.GenerateFromPassword(passwordBytes, 12)
@@ -389,4 +407,51 @@ func GetTokenExpirationTimeFromEnv() int64 {
 
 	return int64(minutes)
 
+}
+
+func ValidateIdentityFieldValue(value string) bool {
+
+	value = strings.Trim(value, " ")
+
+	if len(value) <= 0 {
+		return false
+	}
+	if strings.Count(value, "@") > 0 {
+		_, err := mail.ParseAddress(value)
+		return err == nil
+	}
+
+	return true
+
+}
+
+func ValidatePasswordFieldValue(value string) bool {
+	value = strings.Trim(value, " ")
+
+	return len(value) > 7 && len(value) < 17
+}
+
+func ValidateAuthAction(identityValue, passwordValue interface{}) (bool, error) {
+
+	username, ok := identityValue.(string)
+
+	if !ok {
+		return false, fmt.Errorf("identity field value should be provided as string")
+	}
+
+	if !ValidateIdentityFieldValue(username) {
+		return false, fmt.Errorf("identity field value is invalid")
+	}
+
+	password, ok := passwordValue.(string)
+
+	if !ok {
+		return false, fmt.Errorf("password field value should be provided as string")
+	}
+
+	if !ValidatePasswordFieldValue(password) {
+		return false, fmt.Errorf("password field value is invalid")
+	}
+
+	return true, nil
 }
