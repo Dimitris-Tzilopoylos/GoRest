@@ -204,7 +204,7 @@ func (r *Router) Use(url string, handler func(res http.ResponseWriter, req *http
 	r.mwPreHandlers[url] = append(r.mwPreHandlers[url], RouterMwConfig{handler: handler, priority: r.mwPriority})
 	r.mwPriority += 1
 
-	fmt.Println(Yellow + fmt.Sprintf("Registering Middleware On %s", url) + Reset)
+	fmt.Printf("Registering Middleware On %s\n", url)
 }
 
 func (r *Router) deriveMiddlewarePreHandlersForRoute(url string) []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
@@ -228,7 +228,7 @@ func (r *Router) deriveMiddlewarePreHandlersForRoute(url string) []func(res http
 func (r *Router) Get(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
-	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", GET, url) + Reset)
+	fmt.Printf("Registering Route: [%v]  %s\n", GET, url)
 	(*r).routes[GET][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -241,7 +241,7 @@ func (r *Router) Get(url string, handler http.HandlerFunc) {
 func (r *Router) Post(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
-	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", POST, url) + Reset)
+	fmt.Printf("Registering Route: [%v]  %s\n", POST, url)
 	(*r).routes[POST][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -254,7 +254,7 @@ func (r *Router) Post(url string, handler http.HandlerFunc) {
 func (r *Router) Put(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
-	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", PUT, url) + Reset)
+	fmt.Printf("Registering Route: [%v]  %s\n", PUT, url)
 	(*r).routes[PUT][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -267,7 +267,7 @@ func (r *Router) Put(url string, handler http.HandlerFunc) {
 func (r *Router) Patch(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
-	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", PATCH, url) + Reset)
+	fmt.Printf("Registering Route: [%v]  %s\n", PATCH, url)
 	(*r).routes[PATCH][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -280,7 +280,7 @@ func (r *Router) Patch(url string, handler http.HandlerFunc) {
 func (r *Router) Delete(url string, handler http.HandlerFunc) {
 	url = r.GetUrlWithEntryRoute(url)
 	regexPath, params := buildRegexUrlPath(url)
-	fmt.Println(Yellow + fmt.Sprintf("Registering Route: [%v]  %s", DELETE, url) + Reset)
+	fmt.Printf("Registering Route: [%v]  %s\n", DELETE, url)
 	(*r).routes[DELETE][url] = &Route{
 		path:        url,
 		regexPath:   regexPath,
@@ -526,8 +526,8 @@ func (r *Router) Listen(port string) {
 		WriteTimeout: 30 * time.Second,
 	}
 	version := environment.GetEnvValue("VERSION")
-	fmt.Println(Purple + fmt.Sprintf("GOJila Engine: %s", version) + Reset)
-	fmt.Println(Green + fmt.Sprintf("Server started at: http://localhost%s", port) + Reset)
+	fmt.Printf("GOJila Engine Version: %s\n", version)
+	fmt.Printf("Server started at: http://localhost%s\n", port)
 	err := server.ListenAndServe()
 	if err != nil {
 		panic(err.Error())
