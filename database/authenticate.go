@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -209,7 +210,11 @@ func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (stri
 	for key, value := range userEntity {
 		claims[key] = value
 	}
-	claims["exp"] = GetExpirationTimeForToken(60)
+	expirationMinutes := GetTokenExpirationTimeFromEnv()
+	if expirationMinutes > 0 {
+		claims["exp"] = GetExpirationTimeForToken(expirationMinutes)
+	}
+
 	claims["database"] = payload.Database
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -311,7 +316,10 @@ func (e *Engine) Register(role string, db *sql.DB, payload AuthActionPayload) (i
 }
 
 func (e *Engine) RefreshToken(payload jwt.MapClaims) (string, error) {
-	payload["exp"] = GetExpirationTimeForToken(1 * 60)
+	expirationMinutes := GetTokenExpirationTimeFromEnv()
+	if expirationMinutes > 0 {
+		payload["exp"] = GetExpirationTimeForToken(expirationMinutes)
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
 
 	tokenString, err := token.SignedString(GetSecret())
@@ -364,4 +372,21 @@ func GetExpirationTimeForToken(minutes int64) int64 {
 	}
 
 	return time.Now().Add(time.Minute * time.Duration(minutes)).Unix()
+}
+
+func GetTokenExpirationTimeFromEnv() int64 {
+	expiration := environment.GetEnvValue("JWT_EXPIRATION_IN_MINUTES")
+
+	minutes, err := strconv.Atoi(expiration)
+
+	if err != nil {
+		return 0
+	}
+
+	if minutes <= 0 {
+		return 0
+	}
+
+	return int64(minutes)
+
 }
