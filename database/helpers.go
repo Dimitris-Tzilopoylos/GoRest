@@ -25,6 +25,15 @@ func IsMapToInterface(arg interface{}) (map[string]interface{}, error) {
 	}
 }
 
+func IsMapToArray(arg interface{}) (map[string][]interface{}, error) {
+	switch args := arg.(type) {
+	case map[string][]interface{}:
+		return args, nil
+	default:
+		return nil, fmt.Errorf("type of interface is not map[string][]interface{}")
+	}
+}
+
 func IsJwtMapClaims(arg interface{}) (map[string]interface{}, error) {
 	switch args := arg.(type) {
 	case jwt.MapClaims:

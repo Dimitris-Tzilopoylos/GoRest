@@ -63,11 +63,13 @@ func (e *Engine) SelectExec(role string, db *sql.DB, database string, body inter
 }
 
 func (e *Engine) InsertExec(role string, db *sql.DB, database string, body interface{}) (interface{}, error) {
+
 	databaseExists := e.DatabaseExists(database)
 	if !databaseExists {
 		return nil, fmt.Errorf("database %s doesn't exist", database)
 	}
 	args, err := IsMapToInterface(body)
+
 	if err != nil {
 		return nil, err
 	}
@@ -300,6 +302,7 @@ func (e *Engine) Process(role string, db *sql.DB, database string, body interfac
 
 func (e *Engine) InsertGo(role string, database string, ctx context.Context, tx *sql.Tx, args map[string]interface{}) (interface{}, error) {
 	results := make(map[string][]interface{})
+
 	for key, input := range args {
 		model, err := e.GetModelByKey(database, key)
 		if err != nil {

@@ -25,7 +25,8 @@ func main() {
 	defer db.Close()
 	r := engine.NewApp(db, entryPoint)
 	defer r.Logger.Sync()
-	AuthMW := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
+
+	AuthMainMiddleware := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
 		enhancedReq, err := r.Engine.Authenticate(req)
 		if err != nil {
 			r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
@@ -35,8 +36,20 @@ func main() {
 		next(req)
 	}
 
+	AuthDBMiddleware := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
+		params := engine.GetParams(req)
+		database := params["database"]
+		enhancedReq, err := r.Engine.AuthenticateForDatabase(req, database)
+		if err != nil {
+			r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			return
+		}
+		req = enhancedReq
+		next(req)
+	}
+
 	// ENGINE ROUTES
-	r.Use("/<str:database>", AuthMW)
+	r.Use("/<str:database>", AuthDBMiddleware)
 	r.Post("/<str:database>", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
@@ -51,7 +64,7 @@ func main() {
 
 	})
 
-	r.Use("/<str:database>/process", AuthMW)
+	r.Use("/<str:database>/process", AuthDBMiddleware)
 	r.Post("/<str:database>/process", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
@@ -67,7 +80,7 @@ func main() {
 
 	})
 
-	r.Use("/<str:database>/action", AuthMW)
+	r.Use("/<str:database>/action", AuthDBMiddleware)
 	r.Post("/<str:database>/action", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
@@ -111,7 +124,7 @@ func main() {
 	})
 
 	//AUTH ROUTES
-	r.Use("/auth", AuthMW)
+	r.Use("/auth", AuthMainMiddleware)
 	r.Get("/auth", func(res http.ResponseWriter, req *http.Request) {
 		auth := engine.GetAuth(req)
 		token, err := r.Engine.RefreshToken(auth)
@@ -146,7 +159,7 @@ func main() {
 			return
 		}
 
-		payload := database.LoginPayload{
+		payload := database.AuthActionPayload{
 			Database:      entry.Database,
 			Table:         entry.Table,
 			Body:          body,
@@ -163,6 +176,48 @@ func main() {
 		}
 
 		r.Json(res, http.StatusOK, map[string]string{"token": token})
+
+	})
+
+	r.Post("/auth/register", func(res http.ResponseWriter, req *http.Request) {
+		body := engine.GetBody(req)
+		bodyDB, ok := body["database"]
+		if !ok {
+			r.ErrorResponse(res, http.StatusBadRequest, "Database was not provided!")
+			return
+		}
+		table, ok := body["table"]
+		if !ok {
+			r.ErrorResponse(res, http.StatusBadRequest, "Table was not provided!")
+			return
+		}
+
+		entry := database.Find(r.Engine.GlobalAuthEntities, func(entry database.GlobalAuthEntity) bool {
+			return entry.Database == bodyDB && entry.Table == table
+		})
+
+		if entry == nil {
+			r.ErrorResponse(res, http.StatusNotFound, "Not Found")
+			return
+		}
+
+		payload := database.AuthActionPayload{
+			Database:      entry.Database,
+			Table:         entry.Table,
+			Body:          body,
+			IdentityField: entry.AuthConfig.IdentifyField,
+			PasswordField: entry.AuthConfig.PasswordField,
+			Query:         entry.AuthConfig.Query,
+		}
+
+		result, err := r.Engine.Register("", db, payload)
+
+		if err != nil {
+			r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		r.Json(res, http.StatusOK, result)
 
 	})
 

@@ -14,7 +14,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type LoginPayload struct {
+type RequestContextKey string
+
+type AuthActionPayload struct {
 	Database      string
 	Table         string
 	Body          map[string]interface{}
@@ -35,6 +37,11 @@ type GlobalAuthEntity struct {
 	Database   string
 	Table      string
 	AuthConfig AuthConfig
+}
+
+var RegistrationRestrictKeysMap map[string]bool = map[string]bool{
+	"database": true,
+	"table":    true,
 }
 
 func GetSecret() []byte {
@@ -65,17 +72,56 @@ func (e *Engine) Authenticate(req *http.Request) (*http.Request, error) {
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		req = req.WithContext(context.WithValue(req.Context(), "auth", claims))
+		req = req.WithContext(context.WithValue(req.Context(), RequestContextKey("auth"), claims))
 		return req, nil
 	}
 	return nil, fmt.Errorf("unauthorized")
 }
 
-func (e *Engine) Login(role string, db *sql.DB, payload LoginPayload) (string, error) {
-
-	body := map[string]map[string]interface{}{
-		"_where": make(map[string]interface{}),
+func (e *Engine) AuthenticateForDatabase(req *http.Request, database string) (*http.Request, error) {
+	auth := req.Header.Get("Authorization")
+	if auth == "" {
+		return nil, fmt.Errorf("no token was provided")
 	}
+
+	tokenString := strings.Split(auth, " ")[1]
+
+	if len(tokenString) < 1 {
+		return nil, fmt.Errorf("no token was provided")
+	}
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return GetSecret(), nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		claimsDatabase, ok := claims["database"]
+		if !ok {
+			return nil, fmt.Errorf("unauthorized")
+		}
+
+		parsedDatabase, ok := claimsDatabase.(string)
+		if !ok {
+			return nil, fmt.Errorf("unauthorized")
+		}
+
+		if parsedDatabase != database {
+			return nil, fmt.Errorf("unauthorized")
+		}
+		req = req.WithContext(context.WithValue(req.Context(), RequestContextKey("auth"), claims))
+
+		return req, nil
+	}
+	return nil, fmt.Errorf("unauthorized")
+}
+
+func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (string, error) {
 
 	identityValue, ok := payload.Body[payload.IdentityField]
 	if !ok {
@@ -87,12 +133,25 @@ func (e *Engine) Login(role string, db *sql.DB, payload LoginPayload) (string, e
 		return "", fmt.Errorf("no password value was provided")
 	}
 
+	body := map[string]map[string]interface{}{
+		"_where": make(map[string]interface{}),
+	}
+
 	body["_where"][payload.IdentityField] = map[string]interface{}{
 		"_eq": identityValue,
 	}
 	queryPayload := make(map[string]interface{})
 	payload.Query["_where"] = body["_where"]
 	payload.Query["_limit"] = 1
+	relationalPayload, ok := payload.Query[payload.Table]
+	if ok {
+		relationalPayload, err := IsMapToInterface(relationalPayload)
+		if err == nil {
+			for key, value := range relationalPayload {
+				payload.Query[key] = value
+			}
+		}
+	}
 	queryPayload[payload.Table] = payload.Query
 
 	result, err := e.SelectExec(role, db, payload.Database, queryPayload)
@@ -151,6 +210,8 @@ func (e *Engine) Login(role string, db *sql.DB, payload LoginPayload) (string, e
 		claims[key] = value
 	}
 	claims["exp"] = GetExpirationTimeForToken(60)
+	claims["database"] = payload.Database
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenString, err := token.SignedString(GetSecret())
@@ -159,6 +220,93 @@ func (e *Engine) Login(role string, db *sql.DB, payload LoginPayload) (string, e
 	}
 
 	return tokenString, nil
+
+}
+
+func (e *Engine) Register(role string, db *sql.DB, payload AuthActionPayload) (interface{}, error) {
+
+	passwordValue, ok := payload.Body[payload.PasswordField]
+	if !ok {
+		return nil, fmt.Errorf("no password value was provided")
+	}
+
+	parsedPayload, err := IsMapToInterface(payload.Body)
+	if err != nil {
+
+		return nil, err
+	}
+
+	insertPayload := make(map[string]interface{})
+	objects := make([]interface{}, 0)
+	for key, value := range parsedPayload {
+		if _, ok := RegistrationRestrictKeysMap[key]; !ok {
+			if key == payload.PasswordField {
+				passwordValueToString, ok := passwordValue.(string)
+				if !ok {
+					return nil, fmt.Errorf("registration failed: failed to hash password field")
+				}
+				passwordBytes := []byte(passwordValueToString)
+				hashBytes, err := bcrypt.GenerateFromPassword(passwordBytes, 12)
+				if err != nil {
+					return nil, fmt.Errorf("registration failed: failed to hash password field")
+				}
+				insertPayload[key] = string(hashBytes)
+			} else {
+				insertPayload[key] = value
+			}
+		}
+	}
+
+	if len(insertPayload) == 0 {
+		return nil, fmt.Errorf("registration failed")
+	}
+
+	objects = append(objects, insertPayload)
+
+	body := make(map[string]interface{})
+
+	body[payload.Table] = map[string]interface{}{
+		"objects": objects,
+	}
+
+	result, err := e.InsertExec(role, db, payload.Database, body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	parsedResult, err := IsMapToArray(result)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedUsers, ok := parsedResult[payload.Table]
+
+	if !ok {
+		return nil, fmt.Errorf("nothing was returned after registering")
+	}
+
+	users, err := IsArray(parsedUsers)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("nothing was returned after registering")
+	}
+
+	user := users[0]
+
+	parsedUser, err := IsMapToInterface(user)
+
+	if err != nil {
+		return nil, err
+	}
+
+	delete(parsedUser, payload.PasswordField)
+
+	return parsedUser, nil
 
 }
 
