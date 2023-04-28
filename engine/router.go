@@ -99,7 +99,10 @@ func (r *Router) Json(res http.ResponseWriter, statusCode int, value interface{}
 	default:
 		err := json.NewEncoder(res).Encode(value)
 		if err != nil {
-			panic(err.Error())
+			err := json.NewEncoder(res).Encode([]byte{})
+			if err != nil {
+				panic(err.Error())
+			}
 		}
 	}
 	return statusCode
@@ -113,14 +116,14 @@ func (r *Router) NotFound(res http.ResponseWriter, req *http.Request) {
 	r.Json(res, 404, map[string]string{"message": "NOT_FOUND"})
 }
 
-func NewApp(db *sql.DB, entryUrl string) *Router {
+func NewApp(db *sql.DB) *Router {
 	r := &Router{}
-	r.Initialize(entryUrl)
+	r.Initialize()
 	r.Engine = database.Init(db)
 	return r
 }
 
-func (r *Router) Initialize(entryUrl string) {
+func (r *Router) Initialize() {
 	logger, err := zap.NewProduction()
 	if err != nil {
 		panic(err)
@@ -128,7 +131,7 @@ func (r *Router) Initialize(entryUrl string) {
 	r.EnableHttpLogging = environment.GetEnvValue("HTTP_LOGGER") == "ON"
 	r.EnableSQLLogging = environment.GetEnvValue("SQL_LOGGER") == "ON"
 	r.Logger = logger
-	r.entryUrl = entryUrl
+	r.entryUrl = environment.GetEnvValue("ROUTER_ENTRY_POINT")
 	r.routes = make(map[HttpVerb]map[string]*Route)
 	r.urlKeys = make(map[HttpVerb][]string)
 	r.mwPreHandlers = make(map[string][]RouterMwConfig)
@@ -517,7 +520,8 @@ func (r *Router) populateUrlKeys() {
 	}
 }
 
-func (r *Router) Listen(port string) {
+func (r *Router) Listen() {
+	port := environment.GetEnvValue("PORT")
 	r.populateUrlKeys()
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),

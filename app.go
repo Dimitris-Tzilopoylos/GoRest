@@ -14,8 +14,6 @@ import (
 func main() {
 	environment.LoadEnv()
 	connStr := environment.GetEnvValue("CONNECTION_STRING")
-	entryPoint := environment.GetEnvValue("ROUTER_ENTRY_POINT")
-	port := environment.GetEnvValue("PORT")
 
 	db, err := sql.Open("postgres", connStr)
 	db.SetMaxOpenConns(70)
@@ -24,7 +22,7 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	app := engine.NewApp(db, entryPoint)
+	app := engine.NewApp(db)
 	defer app.Logger.Sync()
 
 	AuthMainMiddleware := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
@@ -239,7 +237,5 @@ func main() {
 
 	})
 
-	// app.Post("/graphql")
-
-	app.Listen(port)
+	app.Listen()
 }
