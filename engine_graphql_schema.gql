@@ -1,0 +1,470 @@
+scalar Object
+scalar SingleValue
+input limit_input_exp {
+  _limit: Int
+}
+input offset_input_exp {
+  _offset: Int
+}
+input _in {
+ _in: [SingleValue!]
+} 
+input _nin {
+ _nin: [SingleValue!]
+} 
+input _lt {
+ _lt: SingleValue
+} 
+input _lte {
+ _lte: SingleValue
+} 
+input _gt {
+ _gt: SingleValue
+} 
+input _gte {
+ _gte: SingleValue
+} 
+input _is {
+ _is: SingleValue
+} 
+input _is_not {
+ _is_not: SingleValue
+} 
+input _like {
+ _like: String
+} 
+input _ilike {
+ _ilike: String
+} 
+input _eq {
+ _eq: SingleValue
+} 
+input _neq {
+ _neq: SingleValue
+} 
+input _any {
+ _any: [SingleValue!]
+} 
+input _nany {
+ _nany: SingleValue
+} 
+input _all {
+ _all: [SingleValue!]
+} 
+input _contains {
+ _contains: Object
+} 
+input _contained_in {
+ _contained_in: Object
+} 
+input _key_exists {
+ _key_exists: String
+} 
+input _key_exists_any {
+ _key_exists_any: [String]
+} 
+input _key_exists_all {
+ _key_exists_all: [String]
+} 
+input _text_search {
+ _text_search: SingleValue
+} 
+input column_input {
+_in: [SingleValue!]
+_nin: [SingleValue!]
+_lt: SingleValue
+_lte: SingleValue
+_gt: SingleValue
+_gte: SingleValue
+_is: SingleValue
+_is_not: SingleValue
+_like: String
+_ilike: String
+_eq: SingleValue
+_neq: SingleValue
+_any: [SingleValue!]
+_nany: SingleValue
+_all: [SingleValue!]
+_contains: Object
+_contained_in: Object
+_key_exists: String
+_key_exists_any: [String]
+_key_exists_all: [String]
+_text_search: SingleValue
+}
+enum order_by_direction_enum {
+DESC
+ASC
+ASC_NULLS_FIRST
+ASC_NULLS_LAST
+DSC_NULLS_FIRST
+DESC_NULLS_LAST
+}
+type eshop_attribute_categories {
+id: Int!
+name: Object!
+grid_order: Int
+}
+type eshop_attributes {
+id: Int!
+category_id: Int
+name: Object!
+grid_order: Int!
+}
+type eshop_categories {
+id: Int!
+supercategory_id: Int!
+enabled: Boolean!
+created_at: String!
+image: String!
+meta: Object!
+name: Object!
+grid_order: Int
+}
+type eshop_countries {
+id: Int!
+name: String!
+code: String!
+}
+type eshop_currencies {
+id: Int!
+name: String!
+meta: Object!
+enabled: Boolean!
+}
+type eshop_favorites {
+id: Int!
+user_id: Int!
+product_id: Int!
+created_at: String!
+}
+type eshop_inventory {
+id: Int!
+product_id: Int!
+quantity: Int!
+}
+type eshop_members {
+id: Int!
+name: String!
+last_name: String!
+email: String!
+password: String!
+country_id: Int
+city: String
+address: String
+postal_code: String
+phone: String
+}
+type eshop_newsletter {
+id: Int!
+email: String!
+name: String
+last_name: String
+created_at: String!
+}
+type eshop_order_products {
+product_id: Int!
+order_id: Int!
+payment_status_id: Int!
+shipping_status_id: Int!
+quantity: Int!
+meta: Object!
+name: Object!
+product_name: String
+original_price: String!
+discount_price: String
+}
+type eshop_orders {
+id: Int!
+created_at: String!
+user_id: Int
+payment_method_id: Int!
+payment_status_id: Int!
+shipping_status_id: Int!
+total: String
+coupon: String
+email: String!
+name: String!
+last_name: String!
+phone: String!
+order_info: String
+city: String!
+address: String!
+postal_code: String
+external_id: String
+shipped_at: String
+admin_info: String
+returned_at: String
+tracking_number: String
+shipping_company: String
+sent_at: String
+delivered_at: String
+country_id: Int!
+shipping_address: String
+shipping_city: String
+shipping_postal_code: String
+shipping_phone: String
+invoice: Boolean
+shipping_country_id: Int
+vat: String
+company_name: String
+company_address: String
+shipping_name: String
+shipping_last_name: String
+shipping_email: String
+}
+type eshop_payment_methods {
+id: Int!
+name: String!
+created_at: String!
+enabled: Boolean!
+}
+type eshop_payment_statuses {
+id: Int!
+name: String!
+created_at: String!
+}
+type eshop_product_attributes {
+id: Int!
+product_id: Int!
+attribute_id: Int!
+}
+type eshop_product_comments {
+id: Int!
+comment: String!
+created_at: String!
+user_id: Int!
+product_id: Int!
+parent_id: Int
+}
+type eshop_product_prices {
+id: Int!
+product_variant_id: Int!
+currency_id: Int!
+price: String!
+}
+type eshop_product_ratings {
+id: Int!
+rating: String!
+created_at: String!
+user_id: Int!
+product_id: Int!
+}
+type eshop_product_sizes {
+id: Int!
+name: String!
+}
+type eshop_product_to_tag {
+product_id: Int!
+tag_id: Int!
+}
+type eshop_product_variants {
+id: Int!
+product_id: Int!
+variant_id: Int!
+quantity: Int!
+}
+type eshop_products {
+id: Int!
+created_at: String!
+price: String!
+category_id: Int!
+meta: Object!
+enabled: Boolean!
+quantity: String!
+status: String!
+name: Object!
+description: Object!
+sku: Object!
+product_name: String
+weight: String!
+height: String!
+width: String!
+length: String!
+}
+type eshop_roles {
+id: Int!
+name: String!
+permissions: Object!
+created_at: String!
+}
+type eshop_shipping_statuses {
+id: Int!
+name: String!
+created_at: String!
+}
+type eshop_supercategories {
+id: Int!
+enabled: Boolean!
+created_at: String!
+meta: Object!
+name: Object!
+image: String!
+grid_order: Int
+}
+type eshop_supercategory_to_website {
+website_id: Int!
+supercategory_id: Int!
+}
+type eshop_tags {
+id: Int!
+created_at: String!
+max_products: Int!
+name: Object!
+enabled: Boolean!
+grid_order: Int
+}
+type eshop_users {
+id: Int!
+email: String!
+name: String!
+last_name: String!
+password: String!
+created_at: String!
+role_id: Int
+}
+type eshop_variants {
+id: Int!
+name: String!
+meta: Object!
+}
+type eshop_websites {
+id: Int!
+domain: String!
+}
+type ianos_investments {
+id: Int!
+investment_id: String!
+title: String!
+owner: String!
+category: String!
+country: String!
+city: String!
+description: String!
+image: String
+created_on: String!
+company: String!
+logo: String
+deadline: String!
+goal: String!
+minimum: String!
+tags: String!
+redirect_to: String!
+enabled: Boolean
+locked: Boolean
+}
+type ianos_roles {
+id: Int!
+name: String!
+title: String!
+level: Int!
+}
+type ianos_users {
+id: Int!
+name: String!
+email: String!
+role: String!
+password: String!
+public_id: String!
+image: String
+created_on: String
+last_login: String
+verified: Boolean!
+approved: Boolean!
+enabled: Boolean!
+reset_token: String
+reset_expr: String
+verify_token: String
+verify_expr: String
+api_key: String
+}
+type shop_members {
+name: String!
+last_name: String!
+role_id: Int!
+email: String!
+active: Boolean!
+verified: Boolean!
+id: Int!
+password: String!
+created_at: String!
+}
+type shop_menu_category {
+id: Int!
+name: String!
+menu_id: Int!
+created_at: String!
+description: String!
+thumbnail: String!
+active: Boolean!
+order_pos: Int!
+}
+type shop_menu_item {
+id: Int!
+name: String!
+thumbnail: String!
+description: String!
+created_at: String!
+price: String!
+menu_category_id: Int!
+active: Boolean!
+order_pos: Int!
+}
+type shop_orders {
+id: Int!
+user_id: Int!
+created_at: String!
+status: String!
+products: Object!
+shop_id: Int!
+}
+type shop_roles {
+id: Int!
+name: String!
+permissions: Object!
+created_at: String!
+}
+type shop_shop_categories {
+id: Int!
+name: String!
+created_at: String!
+}
+type shop_shop_menu {
+id: Int!
+shop_id: Int!
+}
+type shop_shop_to_category {
+shop_id: Int!
+category_id: Int!
+}
+type shop_shop_to_member {
+member_id: Int!
+shop_id: Int!
+}
+type shop_shops {
+id: Int!
+geo: Object!
+details: Object!
+created_at: String!
+name: String!
+image: String
+}
+type shop_users {
+id: Int!
+name: String!
+last_name: String!
+email: String!
+password: String!
+}
+type test_role {
+id: Int!
+name: String!
+test: Object
+}
+type test_users {
+id: Int!
+email: String!
+role_id: Int!
+price: Int!
+password: String
+}

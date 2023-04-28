@@ -5,6 +5,7 @@ import (
 	engine "application/engine"
 	environment "application/environment"
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	_ "github.com/lib/pq"
@@ -23,13 +24,13 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	r := engine.NewApp(db, entryPoint)
-	defer r.Logger.Sync()
+	app := engine.NewApp(db, entryPoint)
+	defer app.Logger.Sync()
 
 	AuthMainMiddleware := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
-		enhancedReq, err := r.Engine.Authenticate(req)
+		enhancedReq, err := app.Engine.Authenticate(req)
 		if err != nil {
-			r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
 			return
 		}
 		req = enhancedReq
@@ -39,123 +40,140 @@ func main() {
 	AuthDBMiddleware := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
 		params := engine.GetParams(req)
 		database := params["database"]
-		enhancedReq, err := r.Engine.AuthenticateForDatabase(req, database)
+		enhancedReq, err := app.Engine.AuthenticateForDatabase(req, database)
 		if err != nil {
-			r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
 			return
 		}
 		req = enhancedReq
 		next(req)
 	}
 
+	app.Get("/", func(res http.ResponseWriter, req *http.Request) {
+
+		responsePayload := map[string]string{
+			"message": fmt.Sprintf("GoJila Version %s", app.Engine.Version),
+		}
+		app.Json(res, http.StatusOK, responsePayload)
+
+	})
+
+	app.Get("/alive", func(res http.ResponseWriter, req *http.Request) {
+		responsePayload := map[string]string{
+			"message": "Api is alive",
+		}
+		app.Json(res, http.StatusOK, responsePayload)
+
+	})
+
 	// ENGINE ROUTES
-	r.Use("/<str:database>", AuthDBMiddleware)
-	r.Post("/<str:database>", func(res http.ResponseWriter, req *http.Request) {
+	app.Use("/<str:database>", AuthDBMiddleware)
+	app.Post("/<str:database>", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
 		database := params["database"]
 
-		x, err := r.Engine.SelectExec("", db, database, body)
+		x, err := app.Engine.SelectExec("", db, database, body)
 		if err != nil {
-			r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
 		}
-		r.Json(res, http.StatusOK, x)
+		app.Json(res, http.StatusOK, x)
 
 	})
 
-	r.Use("/<str:database>/process", AuthDBMiddleware)
-	r.Post("/<str:database>/process", func(res http.ResponseWriter, req *http.Request) {
+	app.Use("/<str:database>/process", AuthDBMiddleware)
+	app.Post("/<str:database>/process", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
 		database := params["database"]
 
-		result, err := r.Engine.Process("", db, database, body)
+		result, err := app.Engine.Process("", db, database, body)
 
 		if err != nil {
-			r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
 		}
-		r.Json(res, http.StatusCreated, result)
+		app.Json(res, http.StatusCreated, result)
 
 	})
 
-	r.Use("/<str:database>/action", AuthDBMiddleware)
-	r.Post("/<str:database>/action", func(res http.ResponseWriter, req *http.Request) {
+	app.Use("/<str:database>/action", AuthDBMiddleware)
+	app.Post("/<str:database>/action", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
 		database := params["database"]
 
-		result, err := r.Engine.InsertExec("", db, database, body)
+		result, err := app.Engine.InsertExec("", db, database, body)
 
 		if err != nil {
-			r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
 		}
-		r.Json(res, http.StatusCreated, result)
+		app.Json(res, http.StatusCreated, result)
 
 	})
 
-	r.Put("/<str:database>/action", func(res http.ResponseWriter, req *http.Request) {
+	app.Put("/<str:database>/action", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
 		database := params["database"]
-		result, err := r.Engine.UpdateExec("", db, database, body)
+		result, err := app.Engine.UpdateExec("", db, database, body)
 		if err != nil {
-			r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
 		}
-		r.Json(res, http.StatusOK, result)
+		app.Json(res, http.StatusOK, result)
 	})
 
-	r.Delete("/<str:database>/action", func(res http.ResponseWriter, req *http.Request) {
+	app.Delete("/<str:database>/action", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
 		database := params["database"]
 
-		result, err := r.Engine.DeleteExec("", db, database, body)
+		result, err := app.Engine.DeleteExec("", db, database, body)
 
 		if err != nil {
-			r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
 		}
-		r.Json(res, http.StatusOK, result)
+		app.Json(res, http.StatusOK, result)
 
 	})
 
 	//AUTH ROUTES
-	r.Use("/auth", AuthMainMiddleware)
-	r.Get("/auth", func(res http.ResponseWriter, req *http.Request) {
+	app.Use("/auth", AuthMainMiddleware)
+	app.Get("/auth", func(res http.ResponseWriter, req *http.Request) {
 		auth := engine.GetAuth(req)
-		token, err := r.Engine.RefreshToken(auth)
+		token, err := app.Engine.RefreshToken(auth)
 		if err != nil {
-			r.ErrorResponse(res, http.StatusUnauthorized, "Unauthorized")
+			app.ErrorResponse(res, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
 
-		r.Json(res, http.StatusOK, map[string]string{"token": token})
+		app.Json(res, http.StatusOK, map[string]string{"token": token})
 
 	})
 
-	r.Post("/auth/login", func(res http.ResponseWriter, req *http.Request) {
+	app.Post("/auth/login", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		bodyDB, ok := body["database"]
 		if !ok {
-			r.ErrorResponse(res, http.StatusBadRequest, "Database was not provided!")
+			app.ErrorResponse(res, http.StatusBadRequest, "Database was not provided!")
 			return
 		}
 		table, ok := body["table"]
 		if !ok {
-			r.ErrorResponse(res, http.StatusBadRequest, "Table was not provided!")
+			app.ErrorResponse(res, http.StatusBadRequest, "Table was not provided!")
 			return
 		}
 
-		entry := database.Find(r.Engine.GlobalAuthEntities, func(entry database.GlobalAuthEntity) bool {
+		entry := database.Find(app.Engine.GlobalAuthEntities, func(entry database.GlobalAuthEntity) bool {
 			return entry.Database == bodyDB && entry.Table == table
 		})
 
 		if entry == nil {
-			r.ErrorResponse(res, http.StatusNotFound, "Not Found")
+			app.ErrorResponse(res, http.StatusNotFound, "Not Found")
 			return
 		}
 
@@ -168,36 +186,36 @@ func main() {
 			Query:         entry.AuthConfig.Query,
 		}
 
-		token, err := r.Engine.Login("", db, payload)
+		token, err := app.Engine.Login("", db, payload)
 
 		if err != nil {
-			r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		r.Json(res, http.StatusOK, map[string]string{"token": token})
+		app.Json(res, http.StatusOK, map[string]string{"token": token})
 
 	})
 
-	r.Post("/auth/register", func(res http.ResponseWriter, req *http.Request) {
+	app.Post("/auth/register", func(res http.ResponseWriter, req *http.Request) {
 		body := engine.GetBody(req)
 		bodyDB, ok := body["database"]
 		if !ok {
-			r.ErrorResponse(res, http.StatusBadRequest, "Database was not provided!")
+			app.ErrorResponse(res, http.StatusBadRequest, "Database was not provided!")
 			return
 		}
 		table, ok := body["table"]
 		if !ok {
-			r.ErrorResponse(res, http.StatusBadRequest, "Table was not provided!")
+			app.ErrorResponse(res, http.StatusBadRequest, "Table was not provided!")
 			return
 		}
 
-		entry := database.Find(r.Engine.GlobalAuthEntities, func(entry database.GlobalAuthEntity) bool {
+		entry := database.Find(app.Engine.GlobalAuthEntities, func(entry database.GlobalAuthEntity) bool {
 			return entry.Database == bodyDB && entry.Table == table
 		})
 
 		if entry == nil {
-			r.ErrorResponse(res, http.StatusNotFound, "Not Found")
+			app.ErrorResponse(res, http.StatusNotFound, "Not Found")
 			return
 		}
 
@@ -210,16 +228,18 @@ func main() {
 			Query:         entry.AuthConfig.Query,
 		}
 
-		result, err := r.Engine.Register("", db, payload)
+		result, err := app.Engine.Register("", db, payload)
 
 		if err != nil {
-			r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		r.Json(res, http.StatusOK, result)
+		app.Json(res, http.StatusOK, result)
 
 	})
 
-	r.Listen(port)
+	// app.Post("/graphql")
+
+	app.Listen(port)
 }

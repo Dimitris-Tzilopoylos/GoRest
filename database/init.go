@@ -1,7 +1,10 @@
 package database
 
 import (
+	"application/environment"
 	"database/sql"
+
+	"github.com/graphql-go/graphql"
 )
 
 type Engine struct {
@@ -10,6 +13,9 @@ type Engine struct {
 	Models                    []*Model                     `json:"models"`
 	DatabaseToTableToModelMap map[string]map[string]*Model `json:"schema"`
 	GlobalAuthEntities        []GlobalAuthEntity
+	GraphQL                   *graphql.Schema
+	InternalSchemaName        string
+	Version                   string
 }
 
 func Init(db *sql.DB) *Engine {
@@ -32,9 +38,12 @@ func Init(db *sql.DB) *Engine {
 		Models:                    models,
 		DatabaseToTableToModelMap: schema,
 		GlobalAuthEntities:        make([]GlobalAuthEntity, 0),
+		InternalSchemaName:        environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Version:                   environment.GetEnvValue("VERSION"),
 	}
 
 	engine.LoadGlobalAuth(db)
+	engine.BuildGraphQLSchema()
 	return engine
 }
 
@@ -55,6 +64,7 @@ func (engine *Engine) Reload(db *sql.DB) {
 	}
 	engine.Models = models
 	engine.DatabaseToTableToModelMap = schema
+	engine.BuildGraphQLSchema()
 }
 
 func InitializeModels(db *sql.DB) ([]*Model, error) {
