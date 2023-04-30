@@ -345,7 +345,12 @@ func GetUrlPath(req *http.Request) string {
 }
 
 func GetAuth(req *http.Request) jwt.MapClaims {
-	return req.Context().Value("auth").(jwt.MapClaims)
+	auth, ok := req.Context().Value("auth").(jwt.MapClaims)
+	if !ok {
+		return nil
+	}
+
+	return auth
 }
 
 func GetParams(req *http.Request) map[string]string {

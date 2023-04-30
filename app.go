@@ -33,8 +33,7 @@ func main() {
 			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
 			return
 		}
-		req = enhancedReq
-		next(req)
+		next(enhancedReq)
 	}
 
 	AuthDBMiddleware := func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
@@ -45,8 +44,7 @@ func main() {
 			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
 			return
 		}
-		req = enhancedReq
-		next(req)
+		next(enhancedReq)
 	}
 
 	app.Get("/", func(res http.ResponseWriter, req *http.Request) {

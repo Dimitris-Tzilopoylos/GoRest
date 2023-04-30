@@ -74,7 +74,7 @@ func (e *Engine) Authenticate(req *http.Request) (*http.Request, error) {
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		req = req.WithContext(context.WithValue(req.Context(), RequestContextKey("auth"), claims))
+		req = req.WithContext(context.WithValue(req.Context(), "auth", claims))
 		return req, nil
 	}
 	return nil, fmt.Errorf("unauthorized")
@@ -116,7 +116,7 @@ func (e *Engine) AuthenticateForDatabase(req *http.Request, database string) (*h
 		if parsedDatabase != database {
 			return nil, fmt.Errorf("unauthorized")
 		}
-		req = req.WithContext(context.WithValue(req.Context(), RequestContextKey("auth"), claims))
+		req = req.WithContext(context.WithValue(req.Context(), "auth", claims))
 
 		return req, nil
 	}
