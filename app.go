@@ -14,10 +14,12 @@ import (
 func main() {
 	environment.LoadEnv()
 	connStr := environment.GetEnvValue("CONNECTION_STRING")
+	maxConnections := environment.GetEnvValueToIntWithDefault("MAX_CONNECTIONS", 50)
+	maxIdleConnections := environment.GetEnvValueToIntWithDefault("MAX_IDLE_CONNECTIONS", 50)
 
 	db, err := sql.Open("postgres", connStr)
-	db.SetMaxOpenConns(70)
-	db.SetMaxIdleConns(70)
+	db.SetMaxOpenConns(maxConnections)
+	db.SetMaxIdleConns(maxIdleConnections)
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +51,9 @@ func main() {
 
 	app.Get("/", func(res http.ResponseWriter, req *http.Request) {
 		responsePayload := map[string]string{
-			"message": fmt.Sprintf("GoJila Version %s", app.Engine.Version),
+			"version":    fmt.Sprintf("GoJila Version %s", app.Engine.Version),
+			"base":       app.BaseUrl,
+			"aliveSince": app.AliveSince,
 		}
 		app.Json(res, http.StatusOK, responsePayload)
 
@@ -57,7 +61,8 @@ func main() {
 
 	app.Get("/alive", func(res http.ResponseWriter, req *http.Request) {
 		responsePayload := map[string]string{
-			"message": "Api is alive",
+			"message":    "Api is alive",
+			"aliveSince": app.AliveSince,
 		}
 		app.Json(res, http.StatusOK, responsePayload)
 

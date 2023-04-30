@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"time"
 )
 
 func IsMapToInterface(arg interface{}) (map[string]interface{}, error) {
@@ -44,4 +45,9 @@ func CheckIfFloat32IsInt(value float32) interface{} {
 		return int64(value)
 	}
 	return value
+}
+
+func GetNow() string {
+	now := time.Now()
+	return now.String()
 }

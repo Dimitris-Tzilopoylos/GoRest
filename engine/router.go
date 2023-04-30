@@ -64,7 +64,8 @@ type RouterMwConfig struct {
 }
 
 type Router struct {
-	entryUrl          string
+	BaseUrl           string
+	AliveSince        string
 	routes            map[HttpVerb]map[string]*Route
 	urlKeys           map[HttpVerb][]string
 	mwPreHandlers     map[string][]RouterMwConfig
@@ -131,7 +132,7 @@ func (r *Router) Initialize() {
 	r.EnableHttpLogging = environment.GetEnvValue("HTTP_LOGGER") == "ON"
 	r.EnableSQLLogging = environment.GetEnvValue("SQL_LOGGER") == "ON"
 	r.Logger = logger
-	r.entryUrl = environment.GetEnvValue("ROUTER_ENTRY_POINT")
+	r.BaseUrl = environment.GetEnvValue("ROUTER_ENTRY_POINT")
 	r.routes = make(map[HttpVerb]map[string]*Route)
 	r.urlKeys = make(map[HttpVerb][]string)
 	r.mwPreHandlers = make(map[string][]RouterMwConfig)
@@ -140,6 +141,7 @@ func (r *Router) Initialize() {
 		r.urlKeys[httpVerb] = []string{}
 		r.routes[httpVerb] = make(map[string]*Route)
 	}
+	r.AliveSince = GetNow()
 }
 
 func (r *Router) GetApplicationContext() *Router {
@@ -192,8 +194,12 @@ func buildRegexUrlPath(url string) (string, map[string]HttpParam) {
 }
 
 func (r *Router) GetUrlWithEntryRoute(url string) string {
-	if len(r.entryUrl) > 0 {
-		return fmt.Sprintf("%s%s", r.entryUrl, url)
+
+	if len(r.BaseUrl) > 0 {
+		if !strings.HasSuffix(url, "/") {
+			url = url + "/"
+		}
+		return fmt.Sprintf("%s%s", r.BaseUrl, url)
 	}
 
 	return url
@@ -331,7 +337,11 @@ func GetRequestIP(r *http.Request) string {
 }
 
 func GetUrlPath(req *http.Request) string {
-	return req.URL.Path
+	path := req.URL.Path
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+	return path
 }
 
 func GetAuth(req *http.Request) jwt.MapClaims {
