@@ -48,7 +48,6 @@ func main() {
 	}
 
 	app.Get("/", func(res http.ResponseWriter, req *http.Request) {
-
 		responsePayload := map[string]string{
 			"message": fmt.Sprintf("GoJila Version %s", app.Engine.Version),
 		}

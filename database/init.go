@@ -14,8 +14,11 @@ type Engine struct {
 	DatabaseToTableToModelMap map[string]map[string]*Model `json:"schema"`
 	GlobalAuthEntities        []GlobalAuthEntity
 	GraphQL                   *graphql.Schema
+	EventEmitter              *EventEmitter
 	InternalSchemaName        string
 	Version                   string
+	Webhooks                  map[string]map[string]map[string]map[string][]Webhook
+	DataTriggers              map[string]map[string]DataTrigger
 }
 
 func Init(db *sql.DB) *Engine {
@@ -40,9 +43,12 @@ func Init(db *sql.DB) *Engine {
 		GlobalAuthEntities:        make([]GlobalAuthEntity, 0),
 		InternalSchemaName:        environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
 		Version:                   environment.GetEnvValue("VERSION"),
+		EventEmitter:              NewEventEmitter(),
 	}
 
 	engine.LoadGlobalAuth(db)
+	engine.LoadWebhooks(db)
+	engine.LoadDataTriggers(db)
 	engine.BuildGraphQLSchema()
 	return engine
 }
@@ -64,6 +70,9 @@ func (engine *Engine) Reload(db *sql.DB) {
 	}
 	engine.Models = models
 	engine.DatabaseToTableToModelMap = schema
+	engine.LoadGlobalAuth(db)
+	engine.LoadWebhooks(db)
+	engine.LoadDataTriggers(db)
 	engine.BuildGraphQLSchema()
 }
 

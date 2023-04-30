@@ -545,3 +545,17 @@ func (r *Router) EngineHandlerWithContext(handler http.HandlerFunc) http.Handler
 		handler(res, req)
 	}
 }
+
+func (r *Router) Subscribe(eventName string, listener func(args ...any)) func() {
+	return r.Engine.EventEmitter.Subscribe(eventName, listener)
+}
+
+func (r *Router) RemoveAllLEventEmitteristeners() {
+	for key := range r.Engine.EventEmitter.EventMap {
+		delete(r.Engine.EventEmitter.EventMap, key)
+	}
+}
+
+func (r *Router) EmitEvent(eventName string, args ...any) {
+	r.Engine.EventEmitter.Emit(eventName, args...)
+}

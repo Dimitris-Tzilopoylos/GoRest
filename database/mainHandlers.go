@@ -101,6 +101,30 @@ func (e *Engine) InsertExec(role string, db *sql.DB, database string, body inter
 
 	*shouldRollback = false
 
+	parsedResults, err := IsMapToArray(results)
+	if err == nil {
+		for key, payload := range parsedResults {
+			webhookInput := WebhookExecInput{
+				Database:  database,
+				Table:     key,
+				Operation: INSERT_OPERATION,
+				Type:      POST_EXEC,
+				Payload:   payload,
+				Auth:      role,
+			}
+			go e.ExecuteWebhooks(webhookInput)
+
+			dataTriggerInput := DataTriggerInput{
+				Database:  database,
+				Table:     key,
+				Operation: INSERT_OPERATION,
+				Payload:   payload,
+				Auth:      role,
+				Type:      RestDataTrigger,
+			}
+			go e.ExecuteDataTrigger(dataTriggerInput)
+		}
+	}
 	return results, nil
 }
 
@@ -144,6 +168,31 @@ func (e *Engine) UpdateExec(role string, db *sql.DB, database string, body inter
 
 	*shouldRollback = false
 
+	parsedResults, err := IsMapToArray(results)
+	if err == nil {
+		for key, payload := range parsedResults {
+			webhookInput := WebhookExecInput{
+				Database:  database,
+				Table:     key,
+				Operation: UPDATE_OPERATION,
+				Type:      POST_EXEC,
+				Payload:   payload,
+				Auth:      role,
+			}
+			go e.ExecuteWebhooks(webhookInput)
+
+			dataTriggerInput := DataTriggerInput{
+				Database:  database,
+				Table:     key,
+				Operation: UPDATE_OPERATION,
+				Payload:   payload,
+				Auth:      role,
+				Type:      RestDataTrigger,
+			}
+			go e.ExecuteDataTrigger(dataTriggerInput)
+		}
+	}
+
 	return results, nil
 }
 
@@ -182,6 +231,31 @@ func (e *Engine) DeleteExec(role string, db *sql.DB, database string, body inter
 	}
 
 	*shouldRollback = false
+
+	parsedResults, err := IsMapToArray(results)
+	if err == nil {
+		for key, payload := range parsedResults {
+			webhookInput := WebhookExecInput{
+				Database:  database,
+				Table:     key,
+				Operation: DELETE_OPERATION,
+				Type:      POST_EXEC,
+				Payload:   payload,
+				Auth:      role,
+			}
+			go e.ExecuteWebhooks(webhookInput)
+
+			dataTriggerInput := DataTriggerInput{
+				Database:  database,
+				Table:     key,
+				Operation: DELETE_OPERATION,
+				Payload:   payload,
+				Auth:      role,
+				Type:      RestDataTrigger,
+			}
+			go e.ExecuteDataTrigger(dataTriggerInput)
+		}
+	}
 
 	return results, nil
 }
