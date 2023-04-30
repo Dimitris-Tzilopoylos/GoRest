@@ -7,7 +7,7 @@ import (
 )
 
 func (e *Engine) SelectExec(role string, db *sql.DB, database string, body interface{}) ([]byte, error) {
-
+	ctx := context.Background()
 	databaseExists := e.DatabaseExists(database)
 
 	if !databaseExists {
@@ -44,7 +44,7 @@ func (e *Engine) SelectExec(role string, db *sql.DB, database string, body inter
 			args = append(args, newArgs...)
 		}
 
-		scanner := Query(db, query, args...)
+		scanner := SelectQueryContext(ctx, db, query, args...)
 		var r []byte
 		cb := func(rows *sql.Rows) error {
 			err := rows.Scan(&r)

@@ -5,6 +5,24 @@ import (
 	"database/sql"
 )
 
+func SelectQueryContext(ctx context.Context, db *sql.DB, query string, args ...any) func(func(rows *sql.Rows) error) error {
+	rows, err := db.QueryContext(ctx, query, args...)
+	return func(callback func(rows *sql.Rows) error) error {
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			err = callback(rows)
+			if err != nil {
+				return err
+			}
+		}
+
+		return err
+	}
+}
+
 func Query(db *sql.DB, query string, args ...any) func(func(rows *sql.Rows) error) error {
 	rows, err := db.Query(query, args...)
 	return func(callback func(rows *sql.Rows) error) error {
