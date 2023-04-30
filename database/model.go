@@ -271,8 +271,8 @@ func (model *Model) SelectAggregate(role string, body interface{}, depth int, id
 	return query, args
 }
 
-func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body interface{}) (interface{}, error) {
-	query, args, err := model.InsertOneQueryBuilder(role, body, nil)
+func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body interface{}, onConflict interface{}) (interface{}, error) {
+	query, args, err := model.InsertOneQueryBuilder(role, body, onConflict)
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +290,7 @@ func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body in
 		if parsedRowErr != nil {
 			return nil, parsedRowErr
 		}
+
 		for _, key := range relations {
 			relatedModel, err := model.GetModelRelation(key)
 			if err != nil {
@@ -321,7 +322,7 @@ func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body in
 			if !ok {
 				return nil, fmt.Errorf("malformed insertion")
 			}
-
+			onConflict := parsedRelationalInput["onConflict"]
 			parsedObjects, err := IsArray(objects)
 
 			if err != nil {
@@ -339,7 +340,7 @@ func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body in
 					value, ok := parsedRow[relationalInfo.FromColumn]
 					if ok {
 						parsedInput[relationalInfo.ToColumn] = value
-						result, err := relatedModel.Insert(role, ctx, tx, parsedInput)
+						result, err := relatedModel.Insert(role, ctx, tx, parsedInput, onConflict)
 						if err != nil {
 							return nil, err
 						}
@@ -355,15 +356,110 @@ func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body in
 
 		}
 	}
-	// insertionResult := InsertionResult{
-	// 	LastInsertId: lastInsertId,
-	// 	RowsAffected: affectedRows,
-	// }
 	return row, nil
 }
 
+func (model *Model) BuildOnConflict(onConflict interface{}) (string, error) {
+	if onConflict == nil {
+		return "", nil
+	}
+	parsedOnConflict, err := IsMapToInterface(onConflict)
+	if err != nil {
+		return "", err
+	}
+
+	constraints, ok := parsedOnConflict["constraints"]
+	if !ok {
+		return "", fmt.Errorf("constraints should be an array of strings")
+	}
+
+	arr, err := IsArray(constraints)
+	if err != nil {
+		return "", fmt.Errorf("constraints should be an array of strings")
+	}
+
+	if len(arr) > len(model.Columns) {
+		return "", fmt.Errorf("too many constraints")
+	}
+
+	constraintsParsed, err := isArrayOfStrings(constraints)
+
+	if err != nil {
+		return "", err
+	}
+	constraintParts := make([]string, 0)
+	for _, column := range constraintsParsed {
+		if _, ok := model.ColumnsMap[column]; !ok {
+			return "", fmt.Errorf("model for database: %s and table: %s has no column: %s", model.Database, model.Table, column)
+		}
+		constraintParts = append(constraintParts, column)
+	}
+
+	if len(constraintParts) == 0 {
+		return "", fmt.Errorf("constraints should be an array of strings ")
+	}
+
+	update, ok := parsedOnConflict["update"]
+	if ok {
+		if update == "*" {
+			columnParts := make([]string, 0)
+			for key := range model.ColumnsMap {
+				columnParts = append(columnParts, fmt.Sprintf("%s = EXCLUDED.%s", key, key))
+			}
+
+			return fmt.Sprintf("ON CONFLICT (%s) DO UPDATE SET %s", strings.Join(constraintParts, ","), strings.Join(columnParts, ",")), nil
+		}
+
+		arr, err := IsArray(update)
+
+		if err != nil {
+			return "", err
+		}
+
+		if len(arr) > len(model.Columns) {
+			return "", fmt.Errorf("too many update entries")
+		}
+
+		updateArr, err := isArrayOfStrings(update)
+		if err != nil {
+			return "", err
+		}
+		columnParts := make([]string, 0)
+		for _, column := range updateArr {
+			if _, ok := model.ColumnsMap[column]; !ok {
+				return "", fmt.Errorf("model for database: %s and table: %s has no column: %s", model.Database, model.Table, column)
+			}
+			columnParts = append(columnParts, fmt.Sprintf("%s = EXCLUDED.%s", column, column))
+		}
+
+		if len(columnParts) == 0 {
+			return "", fmt.Errorf("update should be an array of strings or a string that equals *")
+		}
+		return fmt.Sprintf("ON CONFLICT (%s) DO UPDATE SET %s", strings.Join(constraintParts, ","), strings.Join(columnParts, ",")), nil
+	}
+
+	ignore, ok := parsedOnConflict["ignore"]
+
+	if !ok {
+		return "", fmt.Errorf("no action provided for  conflict")
+	}
+
+	ignoreParsed, ok := ignore.(bool)
+
+	if !ok {
+		return "", fmt.Errorf("ignore should be of type boolean")
+	}
+
+	if !ignoreParsed {
+		return "", nil
+	}
+
+	return fmt.Sprintf("ON CONFLICT (%s) DO NOTHING", strings.Join(constraintParts, ",")), nil
+
+}
+
 func (model *Model) InsertOneQueryBuilder(role string, body interface{}, onConflict interface{}) (string, []interface{}, error) {
-	query := "INSERT INTO %s.%s(%s) VALUES(%s) RETURNING *"
+	query := "INSERT INTO %s.%s(%s) VALUES(%s) %s RETURNING *"
 	args := make([]interface{}, 0)
 	parsedBody, err := isEligibleInsertModelRequestBody(body)
 	if err != nil {
@@ -396,7 +492,14 @@ func (model *Model) InsertOneQueryBuilder(role string, body interface{}, onConfl
 	if !flag {
 		return query, args, fmt.Errorf("nothing to insert here")
 	}
-	query = fmt.Sprintf(query, model.Database, model.Table, strings.Join(columnsParts, ","), strings.Join(valuesParts, ","))
+
+	onConflictStr, err := model.BuildOnConflict(onConflict)
+
+	if err != nil {
+		return query, args, err
+	}
+
+	query = fmt.Sprintf(query, model.Database, model.Table, strings.Join(columnsParts, ","), strings.Join(valuesParts, ","), onConflictStr)
 	return query, args, nil
 }
 

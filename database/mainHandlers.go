@@ -391,6 +391,7 @@ func (e *Engine) InsertGo(role string, database string, ctx context.Context, tx 
 		if !ok {
 			return nil, fmt.Errorf("no input was found")
 		}
+		onConflict := parsedInput["onConflict"]
 
 		parsedObjects, err := IsArray(objects)
 		if err != nil {
@@ -398,7 +399,10 @@ func (e *Engine) InsertGo(role string, database string, ctx context.Context, tx 
 		}
 		results[key] = make([]interface{}, 0)
 		for _, entry := range parsedObjects {
-			result, err := model.Insert(role, ctx, tx, entry)
+			if err != nil {
+				return nil, nil
+			}
+			result, err := model.Insert(role, ctx, tx, entry, onConflict)
 			if err != nil {
 				return nil, err
 			}

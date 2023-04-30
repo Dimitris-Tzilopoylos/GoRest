@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -53,14 +54,21 @@ func IsArray(arg interface{}) ([]interface{}, error) {
 	return x, nil
 }
 
-func IsStringArray(arg interface{}) ([]string, error) {
-
-	switch args := arg.(type) {
-	case []string:
-		return args, nil
-	default:
-		return nil, fmt.Errorf("value is not a string array")
+func isArrayOfStrings(arg interface{}) ([]string, error) {
+	v := reflect.ValueOf(arg)
+	if v.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("type of interface is not []string")
 	}
+	items := make([]string, 0)
+	for i := 0; i < v.Len(); i++ {
+		val, ok := v.Index(i).Interface().(string)
+		if !ok {
+			return nil, fmt.Errorf("type of interface is not []string")
+		}
+		items = append(items, val)
+	}
+	return items, nil
+
 }
 
 func IsEligibleWhereOperation(arg interface{}) bool {
