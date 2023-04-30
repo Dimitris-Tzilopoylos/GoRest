@@ -153,6 +153,7 @@ func (engine *Engine) PostEvent(input DataTriggerInput) {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", input.Auth))
+	req.Header.Set("X-Api-key", environment.GetEnvValue("DATA_TRIGGER_SERVICE_API_KEY"))
 
 	client := http.Client{}
 	res, err := client.Do(req)
