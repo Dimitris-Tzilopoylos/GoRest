@@ -117,7 +117,7 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 		return query, args
 	}
 	builder := GetRelationalCoalesceSymbols(model, relationInfo, depth, parentAlias)
-	query = fmt.Sprintf(`SELECT coalesce(jsonb_agg(_%d_%s)%s,'%s') as %s FROM (`,
+	query = fmt.Sprintf(`SELECT coalesce(json_agg(_%d_%s)%s,'%s') as %s FROM (`,
 		depth,
 		model.Table,
 		builder.RelationExtractSymbol,
