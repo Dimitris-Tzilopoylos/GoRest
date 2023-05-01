@@ -14,13 +14,6 @@ import (
 type JSONB json.RawMessage
 type JSON json.RawMessage
 type JSONColumn interface{}
-type Column struct {
-	Name         string `json:"name"`
-	Type         string `json:"type"`
-	MaxLength    int64  `json:"max_length"`
-	Nullable     bool   `json:"nullable"`
-	DefaultValue string `json:"default_value"`
-}
 
 type RelationWhereAggregate struct {
 	alias    string
@@ -49,17 +42,6 @@ type DatabaseRelationSchema struct {
 	ToTable      string `json:"to_table"`
 	ToColumn     string `json:"to_column"`
 	RelationType string `json:"relation_type"`
-}
-
-type IndexType string
-
-type Index struct {
-	Name            string    `json:"name"`
-	Type            IndexType `json:"type"`
-	Table           string    `json:"table"`
-	Column          string    `json:"column"`
-	ReferenceTable  string    `json:"reference_table"`
-	ReferenceColumn string    `json:"reference_column"`
 }
 
 type Model struct {

@@ -15,6 +15,17 @@ var EXCLUDED_SCHEMAS = []string{
 	"'public'",
 }
 
+const CREATE_DATABASE = `CREATE SCHEMA IF NOT EXISTS %s;`
+const DROP_DATABASE = `DROP SCHEMA IF EXISTS %s CASCADE;`
+const CREATE_TABLE = `CREATE TABLE IF NOT EXISTS %s.%s (%s);`
+const DROP_TABLE = "DROP TABLE IF EXISTS %s.%s CASCADE;"
+const CREATE_UNIQUE_INDEX = "CREATE UNIQUE INDEX %s ON %s.%s (%s);"
+const CREATE_FOREIGN_INDEX = "ALTER TABLE %s.%s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);"
+const DROP_INDEX = `DROP INDEX %s CASCADE;`
+const CREATE_SEQUENCE = `CREATE SEQUENCE IF NOT EXISTS %s.%s`
+const AUTO_INCREMENT_COLUMN = `ALTER TABLE %s.%s ALTER COLUMN %s SET DEFAULT nextval('%s')`
+const CREATE_PRIMARY_INDEX = `ALTER TABLE %s.%s ADD CONSTRAINT %s PRIMARY KEY (%s)`
+
 var GET_DATABASES string = fmt.Sprintf(`SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN (%s) ORDER BY schema_name;`, strings.Join(EXCLUDED_SCHEMAS, ","))
 
 const GET_DATABASE_TABLES = `SELECT table_name FROM information_schema.tables WHERE table_schema = $1 ORDER BY table_name;`

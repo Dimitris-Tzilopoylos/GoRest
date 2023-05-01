@@ -1,0 +1,509 @@
+[
+    {
+        "name": "engine_logs",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "log_type",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "log_data",
+                "type": "json",
+                "nullable": false
+            }
+        ]
+    },
+    {
+        "name": "engine_webhooks",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "endpoint",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "enabled",
+                "type": "boolean",
+                "nullable": false,
+                "defaultValue": true
+            },
+            {
+                "name": "db",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "db_table",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "operation",
+                "type": "varchar",
+                "length": 255
+            },
+            {
+                "name": "rest",
+                "type": "boolean",
+                "defaultValue": true,
+                "nullable": false
+            },
+            {
+                "name": "graphql",
+                "type": "boolean",
+                "defaultValue": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "type",
+                "type": "varchar",
+                "length": 255,
+                "defaultValue": "PRE",
+                "nullable": false
+            },
+            {
+                "name": "forward_auth_headers",
+                "type": "boolean",
+                "defaultValue": true,
+                "nullable": false
+            }
+        ]
+    },
+    {
+        "name": "engine_users",
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigserial",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "email",
+                "type": "varchar",
+                "length": 255,
+                "unique": true,
+                "nullable": false
+            },
+            {
+                "name": "password",
+                "type": "varchar",
+                "length": 255,
+                "nullable": true
+            },
+            {
+                "name": "role_id",
+                "type": "int",
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp with time zone",
+                "nullable": false,
+                "defaultValue": "CURRENT_TIMESTAMP"
+            }
+        ]
+    },
+    {
+        "name": "relations",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "alias",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "db",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "from_table",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "to_table",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "relation",
+                "type": "varchar",
+                "length": 255
+            },
+            {
+                "name": "from_column",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "to_column",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            }
+        ]
+    },
+    {
+        "name": "migrations",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "migration_sql",
+                "type": "json",
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "enabled",
+                "type": "boolean",
+                "defaultValue": true
+            }
+        ]
+    },
+    {
+        "name": "engine_roles",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "role_name",
+                "type": "varchar",
+                "length": 255,
+                "unique": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP"
+            },
+            {
+                "name": "permissions",
+                "type": "json"
+            }
+        ]
+    },
+    {
+        "name": "engine_api_keys",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "api_key",
+                "type": "varchar",
+                "length": 255,
+                "unique": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP"
+            },
+            {
+                "name": "enabled",
+                "type": "boolean",
+                "defaultValue": true
+            }
+        ]
+    },
+    {
+        "name": "engine_settings",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "name",
+                "type": "varchar",
+                "length": 255,
+                "unique": true,
+                "nullable": false
+            },
+            {
+                "name": "value",
+                "type": "json"
+            }
+        ]
+    },
+    {
+        "name": "engine_files",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "file_type",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "file_path",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "file_id",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "type",
+                "type": "varchar",
+                "length": 255
+            }
+        ]
+    },
+    {
+        "name": "engine_file_storage",
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "directory_name",
+                "type": "varchar",
+                "length": 255,
+                "nullable": false,
+                "unique": true
+            },
+            {
+                "name": "description",
+                "type": "text",
+                "nullable": true
+            },
+            {
+                "name": "storage_config",
+                "type": "json"
+            }
+        ]
+    },
+    {
+        "name": "engine_file_storage_files",
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "directory_id",
+                "type": "bigint",
+                "nullable": false
+            },
+            {
+                "name": "name",
+                "type": "text",
+                "nullable": true
+            },
+            {
+                "name": "file_meta",
+                "type": "jsonb"
+            }
+        ]
+    },
+    {
+        "name": "engine_data_triggers",
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "db",
+                "type": "character varying",
+                "nullable": false,
+                "length": 255
+            },
+            {
+                "name": "tbl",
+                "type": "character varying",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "trigger_config",
+                "type": "jsonb"
+            }
+        ]
+    },
+    {
+        "name": "engine_auth_provider",
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "db",
+                "type": "character varying",
+                "nullable": false,
+                "length": 255
+            },
+            {
+                "name": "tbl",
+                "type": "character varying",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "auth_config",
+                "type": "jsonb"
+            }
+        ]
+    },
+    {
+        "name": "engine_rls",
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint",
+                "primary": true,
+                "auto_increment": true,
+                "nullable": false
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "defaultValue": "CURRENT_TIMESTAMP",
+                "nullable": false
+            },
+            {
+                "name": "db",
+                "type": "character varying",
+                "nullable": false,
+                "length": 255
+            },
+            {
+                "name": "tbl",
+                "type": "character varying",
+                "length": 255,
+                "nullable": false
+            },
+            {
+                "name": "rls_config",
+                "type": "jsonb"
+            }
+        ]
+    }
+]

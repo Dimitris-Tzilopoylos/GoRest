@@ -3,6 +3,7 @@ package database
 import (
 	"application/environment"
 	"database/sql"
+	"log"
 
 	"github.com/graphql-go/graphql"
 )
@@ -213,4 +214,12 @@ func GetEngineRelations(db *sql.DB) ([]DatabaseRelationSchema, error) {
 	err := scanner(cb)
 
 	return relations, err
+}
+
+func InitializeEngine(db *sql.DB) {
+	err := CreateDataBase(db, environment.GetEnvValue("INTERNAL_SCHEMA_NAME"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
