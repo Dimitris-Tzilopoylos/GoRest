@@ -96,6 +96,7 @@ func CreateTable(db *sql.DB, table TableInput) error {
 	query := fmt.Sprintf(CREATE_TABLE, table.Database, table.Name, strings.Join(columnParts, ","))
 
 	_, err := db.Query(query)
+	fmt.Println(query)
 
 	return err
 }
@@ -103,12 +104,15 @@ func CreateTable(db *sql.DB, table TableInput) error {
 func DropTable(db *sql.DB, table TableInput) error {
 	query := fmt.Sprintf(DROP_TABLE, table.Database, table.Name)
 	_, err := db.Query(query)
+	fmt.Println(query)
+
 	return err
 }
 
 func DropIndex(db *sql.DB, indexName string) error {
 	query := fmt.Sprintf(DROP_INDEX, indexName)
 	_, err := db.Query(query)
+	fmt.Println(query)
 
 	return err
 }
@@ -121,11 +125,11 @@ func GetColumnNamesInStringArr(columns []ColumnInput) []string {
 	return colNames
 }
 
-func CreateIndexName(prefix string, columns []ColumnInput) string {
+func CreateIndexName(prefix string, table TableInput, columns []ColumnInput) string {
 	colNames := GetColumnNamesInStringArr(columns)
 	sort.Strings(colNames)
 
-	return fmt.Sprintf("%s_%s", prefix, strings.Join(colNames, "_"))
+	return fmt.Sprintf("%s_%s_%s_%s", prefix, table.Database, table.Name, strings.Join(colNames, "_"))
 
 }
 
@@ -136,11 +140,13 @@ func CreateUniqueIndex(db *sql.DB, table TableInput, index IndexInput) error {
 		return fmt.Errorf("no columns were provided")
 	}
 
-	indexName := CreateIndexName("unique_idx", index.Columns)
+	indexName := CreateIndexName("unique_idx", table, index.Columns)
 
 	query := fmt.Sprintf(CREATE_UNIQUE_INDEX, indexName, table.Database, table.Name, strings.Join(columnParts, ","))
 
 	_, err := db.Query(query)
+	fmt.Println(query)
+
 	return err
 }
 
@@ -153,7 +159,7 @@ func CreateForeignIndex(db *sql.DB, table TableInput, index IndexInput) error {
 	columnNames := GetColumnNamesInStringArr(index.Columns)
 	refColumnNames := GetColumnNamesInStringArr(index.RefColumns)
 
-	indexName := CreateIndexName("foreign_idx", index.Columns)
+	indexName := CreateIndexName("foreign_idx", table, index.Columns)
 
 	query := fmt.Sprintf(CREATE_FOREIGN_INDEX,
 		table.Database,
@@ -174,18 +180,19 @@ func CreateForeignIndex(db *sql.DB, table TableInput, index IndexInput) error {
 	}
 
 	_, err := db.Query(query)
+	fmt.Println(query)
 
 	return err
 }
 
 func GetSequenceName(table TableInput, column ColumnInput) string {
-	return fmt.Sprintf("%s_%s", table.Name, column.Name)
+	return fmt.Sprintf("%s.%s_%s", table.Database, table.Name, column.Name)
 }
 
 func GetAutoIncrementSequenceQuery(table TableInput, columns []ColumnInput) (string, error) {
 	for _, column := range columns {
 		if column.AutoIncrement {
-			return fmt.Sprintf(CREATE_SEQUENCE, table.Database, GetSequenceName(table, column)), nil
+			return fmt.Sprintf(CREATE_SEQUENCE, GetSequenceName(table, column)), nil
 
 		}
 	}
@@ -225,6 +232,7 @@ func CreatePrimaryIndex(db *sql.DB, table TableInput, index IndexInput) error {
 
 	if len(sequenceQuery) > 0 && len(alterColumnAutoIncrementQuery) > 0 {
 		_, err = tx.Exec(sequenceQuery)
+		fmt.Println(sequenceQuery)
 		if err != nil {
 			errRB := tx.Rollback()
 			if errRB != nil {
@@ -234,6 +242,7 @@ func CreatePrimaryIndex(db *sql.DB, table TableInput, index IndexInput) error {
 		}
 
 		_, err = tx.Exec(alterColumnAutoIncrementQuery)
+		fmt.Println(alterColumnAutoIncrementQuery)
 		if err != nil {
 			errRB := tx.Rollback()
 			if errRB != nil {
@@ -243,10 +252,11 @@ func CreatePrimaryIndex(db *sql.DB, table TableInput, index IndexInput) error {
 		}
 	}
 
-	indexName := CreateIndexName("primary_idx", index.Columns)
+	indexName := CreateIndexName("primary_idx", table, index.Columns)
 	query := fmt.Sprintf(CREATE_PRIMARY_INDEX, table.Database, table.Name, indexName, strings.Join(columnParts, ","))
 
 	_, err = tx.Exec(query)
+	fmt.Println(query)
 	if err != nil {
 		errRB := tx.Rollback()
 		if errRB != nil {
@@ -277,7 +287,7 @@ func CreateIndex(db *sql.DB, table TableInput, index IndexInput) error {
 	case FOREIGN:
 		err = CreateForeignIndex(db, table, index)
 	case PRIMARY:
-
+		err = CreatePrimaryIndex(db, table, index)
 	default:
 		break
 	}
@@ -289,7 +299,7 @@ func CreateIndexes(db *sql.DB, table TableInput) error {
 	if len(table.Indexes) == 0 {
 		return nil
 	}
-
+	// ADD CHECK IN PRIMARY INDEX IF ALREADY EXISTS!
 	for _, index := range table.Indexes {
 		err := CreateIndex(db, table, index)
 		if err != nil {

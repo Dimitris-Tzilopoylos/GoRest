@@ -23,6 +23,8 @@ type Engine struct {
 }
 
 func Init(db *sql.DB) *Engine {
+	InitializeEngineDatabase(db)
+
 	models, err := InitializeModels(db)
 	if err != nil {
 		panic(err)
@@ -216,10 +218,209 @@ func GetEngineRelations(db *sql.DB) ([]DatabaseRelationSchema, error) {
 	return relations, err
 }
 
-func InitializeEngine(db *sql.DB) {
+func InitializeEngineDatabase(db *sql.DB) {
 	err := CreateDataBase(db, environment.GetEnvValue("INTERNAL_SCHEMA_NAME"))
 	if err != nil {
 		log.Fatal(err)
 	}
+	CreateEngineLogsTable(db)
+	CreateEngineWebhooksTable(db)
+}
+
+func CreateEngineLogsTable(db *sql.DB) {
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "int",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "log_type",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "created_at",
+		Type:         "timestamp",
+		Nullable:     false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+	})
+	columns = append(columns, ColumnInput{
+		Name:     "log_data",
+		Type:     "json",
+		Nullable: false,
+	})
+
+	indexes := []IndexInput{}
+
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "int",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
+
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	indexes = append(indexes, primaryIndex)
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "engine_logs",
+		Columns:  columns,
+		Indexes:  indexes,
+	}
+
+	CreateTable(db, table)
+
+	CreateIndexes(db, table)
+
+}
+
+func CreateEngineWebhooksTable(db *sql.DB) {
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "int",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "endpoint",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "db",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "db_table",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "operation",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "enabled",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "rest",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "graphql",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "forward_auth_headers",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "type",
+		Type:         "varchar",
+		Nullable:     false,
+		MaxLength:    255,
+		DefaultValue: "POST",
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "created_at",
+		Type:         "timestamp",
+		Nullable:     false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+	})
+
+	indexes := []IndexInput{}
+
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "int",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
+
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	uniqueEndpoint := ColumnInput{
+		Name:      "endpoint",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	uniqueDB := ColumnInput{
+		Name:      "db",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	uniqueDBTable := ColumnInput{
+		Name:      "db_table",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	uniqueOperation := ColumnInput{
+		Name:      "operation",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	uniqueColumns := []ColumnInput{}
+
+	uniqueColumns = append(uniqueColumns, uniqueEndpoint)
+	uniqueColumns = append(uniqueColumns, uniqueDB)
+	uniqueColumns = append(uniqueColumns, uniqueDBTable)
+	uniqueColumns = append(uniqueColumns, uniqueOperation)
+
+	uniqueIndex := IndexInput{
+		Columns: uniqueColumns,
+		Type:    UNIQUE,
+	}
+
+	indexes = append(indexes, primaryIndex)
+	indexes = append(indexes, uniqueIndex)
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "engine_webhooks",
+		Columns:  columns,
+		Indexes:  indexes,
+	}
+
+	CreateTable(db, table)
+	CreateIndexes(db, table)
 
 }
