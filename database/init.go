@@ -4,9 +4,12 @@ import (
 	"application/environment"
 	"database/sql"
 	"log"
+	"sync"
 
 	"github.com/graphql-go/graphql"
 )
+
+var mutex sync.Mutex
 
 type Engine struct {
 	Databases                 []string                     `json:"databases"`
@@ -24,7 +27,7 @@ type Engine struct {
 
 func Init(db *sql.DB) *Engine {
 	InitializeEngineDatabase(db)
-
+	databases, _ := GetDatabases(db)
 	models, err := InitializeModels(db)
 	if err != nil {
 		panic(err)
@@ -40,7 +43,9 @@ func Init(db *sql.DB) *Engine {
 		}
 		schema[database][table] = model
 	}
+
 	engine := &Engine{
+		Databases:                 databases,
 		Models:                    models,
 		DatabaseToTableToModelMap: schema,
 		GlobalAuthEntities:        make([]GlobalAuthEntity, 0),
@@ -57,10 +62,14 @@ func Init(db *sql.DB) *Engine {
 }
 
 func (engine *Engine) Reload(db *sql.DB) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	databases, _ := GetDatabases(db)
 	models, err := InitializeModels(db)
 	if err != nil {
 		panic(err)
 	}
+
 	schema := make(map[string]map[string]*Model)
 	for _, model := range models {
 		database := model.Database
@@ -71,6 +80,8 @@ func (engine *Engine) Reload(db *sql.DB) {
 		}
 		schema[database][table] = model
 	}
+
+	engine.Databases = databases
 	engine.Models = models
 	engine.DatabaseToTableToModelMap = schema
 	engine.LoadGlobalAuth(db)
@@ -390,13 +401,33 @@ func CreateEngineAuthProviderTable(db *sql.DB) {
 		DefaultValue: "CURRENT_TIMESTAMP",
 	})
 
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
+
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	indexes := []IndexInput{}
+
+	indexes = append(indexes, primaryIndex)
+
 	table := TableInput{
 		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
 		Name:     "engine_auth_provider",
 		Columns:  columns,
+		Indexes:  indexes,
 	}
 
 	CreateTable(db, table)
+	CreateIndexes(db, table)
 
 }
 
@@ -432,13 +463,33 @@ func CreateEngineDataTriggersTable(db *sql.DB) {
 		DefaultValue: "CURRENT_TIMESTAMP",
 	})
 
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
+
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	indexes := []IndexInput{}
+
+	indexes = append(indexes, primaryIndex)
+
 	table := TableInput{
 		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
 		Name:     "engine_data_triggers",
 		Columns:  columns,
+		Indexes:  indexes,
 	}
 
 	CreateTable(db, table)
+	CreateIndexes(db, table)
 
 }
 
@@ -510,8 +561,21 @@ func CreateEngineRelationsTable(db *sql.DB) {
 		Type:    UNIQUE,
 		Columns: uniqueColumns,
 	}
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
 
-	indexes = append(indexes, uniqueIndex)
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	indexes = append(indexes, primaryIndex, uniqueIndex)
 
 	table := TableInput{
 		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
@@ -571,7 +635,21 @@ func CreateEngineApiKeysTable(db *sql.DB) {
 		Columns: uniqueColumns,
 	}
 
-	indexes = append(indexes, uniqueIndex)
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
+
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	indexes = append(indexes, uniqueIndex, primaryIndex)
 
 	table := TableInput{
 		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),

@@ -45,13 +45,13 @@ type DatabaseRelationSchema struct {
 }
 
 type Model struct {
-	Database         string   `json:"database"`
-	Table            string   `json:"table"`
-	Columns          []Column `json:"columns"`
-	Relations        RelationMap
-	RelationsInfoMap RelationInfoMap
-	Indexes          []Index
-	ColumnsMap       ColumnsMap
+	Database         string          `json:"database"`
+	Table            string          `json:"table"`
+	Columns          []Column        `json:"columns"`
+	Relations        RelationMap     `json:"relations"`
+	RelationsInfoMap RelationInfoMap `json:"relationInfoMap"`
+	Indexes          []Index         `json:"indexes"`
+	ColumnsMap       ColumnsMap      `json:"columnsMap"`
 	RLS              RLSMap
 }
 

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"application/environment"
 	"fmt"
 	"reflect"
 	"strings"
@@ -244,4 +245,10 @@ func GetFirstKeyFromMap(args interface{}) (string, map[string]interface{}, error
 	}
 
 	return "", nil, fmt.Errorf("empty map")
+}
+
+func LogSql(query string) {
+	if environment.GetEnvValue("SQL_LOGGER") == "ON" {
+		fmt.Println(query)
+	}
 }

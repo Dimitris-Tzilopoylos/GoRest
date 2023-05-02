@@ -1,54 +1,35 @@
 package main
 
-import (
-	engine "application/engine"
-	environment "application/environment"
-	"database/sql"
-
-	_ "github.com/lib/pq"
-)
-
 func main() {
-	environment.LoadEnv()
-	connStr := environment.GetEnvValue("CONNECTION_STRING")
-	maxConnections := environment.GetEnvValueToIntWithDefault("MAX_CONNECTIONS", 50)
-	maxIdleConnections := environment.GetEnvValueToIntWithDefault("MAX_IDLE_CONNECTIONS", 50)
 
-	db, err := sql.Open("postgres", connStr)
-	db.SetMaxOpenConns(maxConnections)
-	db.SetMaxIdleConns(maxIdleConnections)
-	if err != nil {
-		panic(err)
-	}
+	app, db := NewApplication()
 	defer db.Close()
-	app := engine.NewApp(db)
 	defer app.Logger.Sync()
 
-	app.Get("/", InfoHandler(app))
+	// BASE ROUTES
+	app.Get(HomeRoute, InfoHandler(app))
+	app.Get(AliveRoute, AliveHandler(app))
 
-	app.Get("/alive", AliveHandler(app))
+	// DATA ROUTES
+	app.Use(QueryRoute, AuthDBMiddleware(app))
+	app.Post(QueryRoute, SelectHandler(app, db))
+	app.Use(ProcessMultipleStatementsRoute, AuthDBMiddleware(app))
+	app.Post(ProcessMultipleStatementsRoute, ProcessHandler(app, db))
+	app.Use(StatementRoute, AuthDBMiddleware(app))
+	app.Post(StatementRoute, InsertHandler(app, db))
+	app.Put(StatementRoute, UpdateHandler(app, db))
+	app.Delete(StatementRoute, DeleteHandler(app, db))
 
-	// ENGINE ROUTES
-	app.Use("/<str:database>", AuthDBMiddleware(app))
-	app.Post("/<str:database>", SelectHandler(app, db))
+	// AUTH ROUTES
+	app.Use(RefreshTokenRoute, AuthMainMiddleware(app))
+	app.Get(RefreshTokenRoute, AuthenticateHandler(app, db))
+	app.Post(LoginRoute, LoginHandler(app, db))
+	app.Post(RegisterRoute, RegisterHandler(app, db))
 
-	app.Use("/<str:database>/process", AuthDBMiddleware(app))
-	app.Post("/<str:database>/process", ProcessHandler(app, db))
-
-	app.Use("/<str:database>/action", AuthDBMiddleware(app))
-	app.Post("/<str:database>/action", InsertHandler(app, db))
-
-	app.Put("/<str:database>/action", UpdateHandler(app, db))
-
-	app.Delete("/<str:database>/action", DeleteHandler(app, db))
-
-	//AUTH ROUTES
-	app.Use("/auth", AuthMainMiddleware(app))
-	app.Get("/auth", AuthenticateHandler(app, db))
-
-	app.Post("/auth/login", LoginHandler(app, db))
-
-	app.Post("/auth/register", RegisterHandler(app, db))
-
+	// DATABASE ROUTES
+	app.Get(DatabasesRoutes, GetDatabases(app, db))
+	app.Post(DatabasesRoutes, CreateDatabase(app, db))
+	app.Get(DatabaseRoutes, GetDatabaseTables(app, db))
+	app.Delete(DatabaseRoutes, DropDatabase(app, db))
 	app.Listen()
 }
