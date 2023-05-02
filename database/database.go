@@ -22,6 +22,21 @@ func FormatDatabaseName(database string) (string, error) {
 
 }
 
+func FormatTableName(table string) (string, error) {
+	tblname := strings.Trim(table, " ")
+	if len(tblname) == 0 {
+		return "", fmt.Errorf("database name has 0 length")
+	}
+	tblname = strings.ToLower(tblname)
+
+	if tblname == environment.GetEnvValue("INTERNAL_SCHEMA_NAME") {
+		return "", fmt.Errorf("cannot create database with the same name as the internal schema")
+	}
+
+	return tblname, nil
+
+}
+
 func GetDatabases(db *sql.DB) ([]string, error) {
 	var database string
 	databases := []string{}

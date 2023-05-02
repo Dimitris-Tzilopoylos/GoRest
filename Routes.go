@@ -17,3 +17,7 @@ var RegisterRoute string = "/auth/register"
 // DATABASE ROUTES
 var DatabasesRoutes string = "/engine/databases"
 var DatabaseRoutes string = "/engine/databases/<str:database>"
+
+// TABLE ROUTES
+var TableRoutes string = "/engine/databases/<str:database>/tables"
+var TableRoute string = "/engine/databases/<str:database>/tables/<str:table>"

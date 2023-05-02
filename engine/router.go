@@ -377,6 +377,18 @@ func GetBody(req *http.Request) map[string]interface{} {
 	return msg
 }
 
+func GetBodyIntoStruct[r *http.Request, T any](req *http.Request, x T) (T, error) {
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&x)
+	return x, err
+}
+
+func GetBodyIntoArrayStruct[r *http.Request, T any](req *http.Request, x []T) ([]T, error) {
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&x)
+	return x, err
+}
+
 func EngageBodyToStruct(req *http.Request, object any) (any, error) {
 	defer req.Body.Close()
 

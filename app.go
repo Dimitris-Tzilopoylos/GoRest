@@ -31,5 +31,11 @@ func main() {
 	app.Post(DatabasesRoutes, CreateDatabase(app, db))
 	app.Get(DatabaseRoutes, GetDatabaseTables(app, db))
 	app.Delete(DatabaseRoutes, DropDatabase(app, db))
+
+	// TABLE ROUTES
+	app.Post(TableRoutes, CreateTable(app, db))
+	app.Get(TableRoute, GetTable(app, db))
+	app.Delete(TableRoute, DropTable(app, db))
+
 	app.Listen()
 }
