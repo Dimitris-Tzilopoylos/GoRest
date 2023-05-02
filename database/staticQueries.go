@@ -49,3 +49,27 @@ const GET_ENGINE_RELATIONS = `SELECT relations.id,relations.alias,relations.db,r
 const GET_GLOBAL_AUTH_CONFIG = `SELECT id,created_at,db,tbl,auth_config FROM root_engine.engine_auth_provider ORDER BY created_at ASC;`
 const ENGINE_GET_WEBHOOKS = `SELECT id,endpoint,enabled,db,db_table,operation,rest,graphql,created_at,type,forward_auth_headers FROM root_engine.engine_webhooks;`
 const ENGINE_GET_DATA_TRIGGERS = `SELECT id,created_at,db,tbl,trigger_config FROM root_engine.engine_data_triggers;`
+
+const GET_UNIQUE_INDXES = `SELECT
+    n.nspname AS schema_name,
+    t.relname AS table_name,
+    i.relname AS index_name,
+    idx.indisunique AS is_unique,
+    STRING_AGG(a.attname, ', ') AS column_names
+FROM
+    pg_index idx
+    JOIN pg_class t ON t.oid = idx.indrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_class i ON i.oid = idx.indexrelid
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(idx.indkey)
+    LEFT JOIN pg_constraint c ON c.conname = i.relname AND c.conrelid = t.oid
+WHERE
+    idx.indisunique = true
+    AND c.oid IS NULL
+    AND n.nspname = $1
+    AND t.relname = $2
+GROUP BY
+    n.nspname,
+    t.relname,
+    i.relname,
+    idx.indisunique;`

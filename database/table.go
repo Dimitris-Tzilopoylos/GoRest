@@ -20,6 +20,7 @@ type Index struct {
 	Column          string    `json:"column"`
 	ReferenceTable  string    `json:"reference_table"`
 	ReferenceColumn string    `json:"reference_column"`
+	Database        string    `json:"database"`
 }
 
 type ColumnInput struct {
@@ -145,9 +146,12 @@ func CreateUniqueIndex(db *sql.DB, table TableInput, index IndexInput) error {
 	query := fmt.Sprintf(CREATE_UNIQUE_INDEX, indexName, table.Database, table.Name, strings.Join(columnParts, ","))
 
 	_, err := db.Query(query)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	fmt.Println(query)
 
-	return err
+	return nil
 }
 
 func CreateForeignIndex(db *sql.DB, table TableInput, index IndexInput) error {
@@ -212,10 +216,23 @@ func GetAlterColumnSetToSequenceQuery(table TableInput, columns []ColumnInput) (
 }
 
 func CreatePrimaryIndex(db *sql.DB, table TableInput, index IndexInput) error {
+
 	columnParts := GetColumnNamesInStringArr(index.Columns)
 
 	if len(columnParts) == 0 {
 		return fmt.Errorf("no columns were provided")
+	}
+
+	existingIndexes, err := GetTableIndexes(db, table.Database, table.Name)
+
+	if err == nil && len(existingIndexes) > 0 {
+		for _, tableIndex := range existingIndexes {
+			if tableIndex.Type == "PRIMARY KEY" {
+				fmt.Println("primary key index already exists for table: " + tableIndex.Table)
+				return nil
+
+			}
+		}
 	}
 
 	sequenceQuery, _ := GetAutoIncrementSequenceQuery(table, index.Columns)
@@ -299,10 +316,10 @@ func CreateIndexes(db *sql.DB, table TableInput) error {
 	if len(table.Indexes) == 0 {
 		return nil
 	}
-	// ADD CHECK IN PRIMARY INDEX IF ALREADY EXISTS!
 	for _, index := range table.Indexes {
 		err := CreateIndex(db, table, index)
 		if err != nil {
+			fmt.Println(err.Error())
 			return err
 		}
 	}

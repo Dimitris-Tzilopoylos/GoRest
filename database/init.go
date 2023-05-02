@@ -4,6 +4,7 @@ import (
 	"application/environment"
 	"database/sql"
 	"log"
+	"strings"
 
 	"github.com/graphql-go/graphql"
 )
@@ -184,11 +185,12 @@ func GetTableColumns(db *sql.DB, database string, table string) ([]Column, error
 }
 
 func GetTableIndexes(db *sql.DB, database string, table string) ([]Index, error) {
-	var index Index
+
 	indexes := []Index{}
 
 	scanner := Query(db, GET_DATABASE_TABLE_INDEXES, database, table)
 	cb := func(rows *sql.Rows) error {
+		var index Index
 		err := rows.Scan(&index.Name, &index.Table, &index.Column, &index.ReferenceTable, &index.ReferenceColumn, &index.Type)
 		if err != nil {
 			panic(err)
@@ -198,6 +200,35 @@ func GetTableIndexes(db *sql.DB, database string, table string) ([]Index, error)
 		return err
 	}
 	err := scanner(cb)
+
+	scannerUnique := Query(db, GET_UNIQUE_INDXES, database, table)
+	unqCB := func(rows *sql.Rows) error {
+		var index Index
+		var unq bool = false
+		err = rows.Scan(&index.Database, &index.Table, &index.Name, &unq, &index.Column)
+		if err != nil {
+			panic(err)
+		}
+
+		if unq {
+			columns := strings.Split(index.Column, ",")
+			for _, col := range columns {
+				colName := strings.Trim(col, " ")
+				newIndex := Index{
+					Name:   index.Name,
+					Type:   "UNIQUE KEY",
+					Table:  index.Table,
+					Column: colName,
+				}
+				indexes = append(indexes, newIndex)
+			}
+		}
+
+		return err
+	}
+
+	err = scannerUnique(unqCB)
+
 	return indexes, err
 }
 
@@ -225,6 +256,10 @@ func InitializeEngineDatabase(db *sql.DB) {
 	}
 	CreateEngineLogsTable(db)
 	CreateEngineWebhooksTable(db)
+	CreateEngineAuthProviderTable(db)
+	CreateEngineDataTriggersTable(db)
+	CreateEngineRelationsTable(db)
+	CreateEngineApiKeysTable(db)
 }
 
 func CreateEngineLogsTable(db *sql.DB) {
@@ -345,7 +380,7 @@ func CreateEngineWebhooksTable(db *sql.DB) {
 		Type:         "varchar",
 		Nullable:     false,
 		MaxLength:    255,
-		DefaultValue: "POST",
+		DefaultValue: "'POST_EXEC'",
 	})
 	columns = append(columns, ColumnInput{
 		Name:         "created_at",
@@ -419,8 +454,235 @@ func CreateEngineWebhooksTable(db *sql.DB) {
 		Columns:  columns,
 		Indexes:  indexes,
 	}
+	CreateTable(db, table)
+	CreateIndexes(db, table)
+
+}
+
+func CreateEngineAuthProviderTable(db *sql.DB) {
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:     "auth_config",
+		Type:     "jsonb",
+		Nullable: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "db",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "tbl",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "created_at",
+		Type:         "timestamp",
+		Nullable:     false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+	})
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "engine_auth_provider",
+		Columns:  columns,
+	}
 
 	CreateTable(db, table)
+
+}
+
+func CreateEngineDataTriggersTable(db *sql.DB) {
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:     "trigger_config",
+		Type:     "jsonb",
+		Nullable: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "db",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "tbl",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "created_at",
+		Type:         "timestamp",
+		Nullable:     false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+	})
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "engine_data_triggers",
+		Columns:  columns,
+	}
+
+	CreateTable(db, table)
+
+}
+
+func CreateEngineRelationsTable(db *sql.DB) {
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "alias",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "db",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "from_table",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "to_table",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "from_column",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "to_column",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "relation",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+
+	indexes := []IndexInput{}
+
+	aliasUniqueColumn := ColumnInput{
+		Name:      "alias",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	uniqueColumns := []ColumnInput{}
+
+	uniqueColumns = append(uniqueColumns, aliasUniqueColumn)
+
+	uniqueIndex := IndexInput{
+		Type:    UNIQUE,
+		Columns: uniqueColumns,
+	}
+
+	indexes = append(indexes, uniqueIndex)
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "relations",
+		Columns:  columns,
+		Indexes:  indexes,
+	}
+
+	CreateTable(db, table)
+
+	CreateIndexes(db, table)
+
+}
+
+func CreateEngineApiKeysTable(db *sql.DB) {
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "api_key",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "created_at",
+		Type:         "timestamp",
+		Nullable:     false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "enabled",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+
+	indexes := []IndexInput{}
+
+	apiKeyUniqueColumn := ColumnInput{
+		Name:      "api_key",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	uniqueColumns := []ColumnInput{}
+
+	uniqueColumns = append(uniqueColumns, apiKeyUniqueColumn)
+
+	uniqueIndex := IndexInput{
+		Type:    UNIQUE,
+		Columns: uniqueColumns,
+	}
+
+	indexes = append(indexes, uniqueIndex)
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "engine_api_keys",
+		Columns:  columns,
+		Indexes:  indexes,
+	}
+
+	CreateTable(db, table)
+
 	CreateIndexes(db, table)
 
 }
