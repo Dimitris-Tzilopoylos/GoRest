@@ -58,6 +58,93 @@ type Column struct {
 	DefaultValue string `json:"default_value"`
 }
 
+func GetTableNames(db *sql.DB, database string) ([]string, error) {
+	var table string
+	tables := []string{}
+	scanner := Query(db, GET_DATABASE_TABLES, database)
+	cb := func(rows *sql.Rows) error {
+		err := rows.Scan(&table)
+		tables = append(tables, table)
+		return err
+	}
+	err := scanner(cb)
+
+	return tables, err
+}
+
+func GetTableColumns(db *sql.DB, database string, table string) ([]Column, error) {
+	var column Column
+	columns := []Column{}
+	var maxLength sql.NullInt64
+	var defaultValue sql.NullString
+	scanner := Query(db, GET_DATABASE_TABLE_COLUMN, database, table)
+	cb := func(rows *sql.Rows) error {
+		err := rows.Scan(&column.Name, &column.Type, &maxLength, &column.Nullable, &defaultValue)
+		if err != nil {
+			panic(err)
+		}
+		if maxLength.Valid {
+			column.MaxLength = maxLength.Int64
+		}
+		if defaultValue.Valid {
+			column.DefaultValue = defaultValue.String
+		}
+		columns = append(columns, column)
+		return err
+	}
+	err := scanner(cb)
+
+	return columns, err
+}
+
+func GetTableIndexes(db *sql.DB, database string, table string) ([]Index, error) {
+
+	indexes := []Index{}
+
+	scanner := Query(db, GET_DATABASE_TABLE_INDEXES, database, table)
+	cb := func(rows *sql.Rows) error {
+		var index Index
+		err := rows.Scan(&index.Name, &index.Table, &index.Column, &index.ReferenceTable, &index.ReferenceColumn, &index.Type)
+		if err != nil {
+			panic(err)
+		}
+
+		indexes = append(indexes, index)
+		return err
+	}
+	err := scanner(cb)
+
+	scannerUnique := Query(db, GET_UNIQUE_INDXES, database, table)
+	unqCB := func(rows *sql.Rows) error {
+		var index Index
+		var unq bool = false
+		err = rows.Scan(&index.Database, &index.Table, &index.Name, &unq, &index.Column)
+		if err != nil {
+			panic(err)
+		}
+
+		if unq {
+			columns := strings.Split(index.Column, ",")
+			for _, col := range columns {
+				colName := strings.Trim(col, " ")
+				newIndex := Index{
+					Name:   index.Name,
+					Type:   "UNIQUE KEY",
+					Table:  index.Table,
+					Column: colName,
+				}
+				indexes = append(indexes, newIndex)
+			}
+		}
+
+		return err
+	}
+
+	err = scannerUnique(unqCB)
+
+	return indexes, err
+}
+
 func GetColumnFromInputToSqlString(column ColumnInput) (string, error) {
 	str := fmt.Sprintf("%s %s", column.Name, column.Type)
 	if column.MaxLength != 0 {
