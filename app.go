@@ -27,27 +27,34 @@ func main() {
 	app.Post(RegisterRoute, RegisterHandler(app, db))
 
 	// RELATIONS ROUTES
+	app.Use(RelationsRoutes, AuthMainMiddleware(app))
 	app.Get(RelationsRoutes, GetRelations(app, db))
 	app.Post(RelationsRoutes, CreateRelation(app, db))
 	app.Put(RelationsRoutes, UpdateRelation(app, db))
 	app.Delete(RelationsRoutes, DeleteRelation(app, db))
 
 	// DATABASE ROUTES
+	app.Use(DatabasesRoutes, AuthMainMiddleware(app))
 	app.Get(DatabasesRoutes, GetDatabases(app, db))
 	app.Post(DatabasesRoutes, CreateDatabase(app, db))
+	app.Use(DatabaseRoutes, AuthMainMiddleware(app))
 	app.Get(DatabaseRoutes, GetDatabaseTables(app, db))
 	app.Delete(DatabaseRoutes, DropDatabase(app, db))
 
 	// TABLE ROUTES
+	app.Use(TableRoutes, AuthMainMiddleware(app))
 	app.Post(TableRoutes, CreateTable(app, db))
+	app.Use(TableRoute, AuthMainMiddleware(app))
 	app.Get(TableRoute, GetTable(app, db))
 	app.Delete(TableRoute, DropTable(app, db))
 
 	// COLUMN ROUTES
+	app.Use(ColumnsRoute, AuthMainMiddleware(app))
 	app.Post(ColumnsRoute, CreateColumn(app, db))
 	app.Delete(ColumnsRoute, DropColumn(app, db))
 
 	// INDEX ROUTES
+	app.Use(IndexesRoute, AuthMainMiddleware(app))
 	app.Post(IndexesRoute, CreateIndex(app, db))
 	app.Delete(IndexesRoute, DropIndex(app, db))
 
