@@ -23,15 +23,6 @@ type Index struct {
 	Database        string    `json:"database"`
 }
 
-type ColumnInput struct {
-	Name          string      `json:"name"`
-	Type          string      `json:"type"`
-	MaxLength     int64       `json:"maxLength"`
-	Nullable      bool        `json:"nullable"`
-	DefaultValue  interface{} `json:"defaultValue"`
-	AutoIncrement bool
-}
-
 type IndexInput struct {
 	Name        string
 	Columns     []ColumnInput

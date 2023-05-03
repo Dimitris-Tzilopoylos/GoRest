@@ -53,6 +53,13 @@ func DeleteRelationsByDatabaseTable(db *sql.DB, relationInput DatabaseRelationSc
 	return err
 }
 
+func DeleteRelationsByDatabaseTableColumn(db *sql.DB, relationInput DatabaseRelationSchema) error {
+	query := fmt.Sprintf(`DELETE FROM %s.relations WHERE db = $1 AND ((from_table = $2 AND from_column = $3) OR (to_table=$4 AND to_column=$5))`, environment.GetEnvValue("INTERNAL_SCHEMA_NAME"))
+	_, err := db.Query(query, relationInput.Database, relationInput.Table, relationInput.FromColumn, relationInput.Table, relationInput.ToColumn)
+
+	return err
+}
+
 func ValidateRelationParts(engineMap map[string]map[string]*Model, relationInput DatabaseRelationSchema) (bool, error) {
 
 	if ARRAY != relationInput.RelationType && OBJECT != relationInput.RelationType {

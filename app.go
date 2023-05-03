@@ -43,5 +43,9 @@ func main() {
 	app.Get(TableRoute, GetTable(app, db))
 	app.Delete(TableRoute, DropTable(app, db))
 
+	// COLUMN ROUTES
+	app.Post(ColumnsRoute, CreateColumn(app, db))
+	app.Delete(ColumnsRoute, DropColumn(app, db))
+
 	app.Listen()
 }
