@@ -47,5 +47,9 @@ func main() {
 	app.Post(ColumnsRoute, CreateColumn(app, db))
 	app.Delete(ColumnsRoute, DropColumn(app, db))
 
+	// INDEX ROUTES
+	app.Post(IndexesRoute, CreateIndex(app, db))
+	app.Delete(IndexesRoute, DropIndex(app, db))
+
 	app.Listen()
 }
