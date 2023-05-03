@@ -33,16 +33,6 @@ type InsertionResult struct {
 	RowsAffected any
 	Returning    any
 }
-type DatabaseRelationSchema struct {
-	Id           int64  `json:"id"`
-	Alias        string `json:"alias"`
-	Database     string `json:"database"`
-	FromTable    string `json:"from_table"`
-	FromColumn   string `json:"from_column"`
-	ToTable      string `json:"to_table"`
-	ToColumn     string `json:"to_column"`
-	RelationType string `json:"relation_type"`
-}
 
 type Model struct {
 	Database         string          `json:"database"`

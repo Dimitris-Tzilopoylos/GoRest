@@ -104,7 +104,13 @@ func DropTable(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		}
 
 		// HANDLE DELETE RELEVANT ENTITIES: e.g relations
+		relationInput := database.DatabaseRelationSchema{
+			Database: dbname,
+			Table:    tblname,
+		}
+		database.DeleteRelationsByDatabaseTable(db, relationInput)
 
+		// RELOAD ENGINE IN MEMORY
 		app.Engine.Reload(db)
 		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("Table %s for Database %s was successfully deleted", tblname, dbname)})
 	}

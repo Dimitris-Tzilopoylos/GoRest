@@ -16,6 +16,7 @@ type Engine struct {
 	Database                  string                       `json:"database"`
 	Models                    []*Model                     `json:"models"`
 	DatabaseToTableToModelMap map[string]map[string]*Model `json:"schema"`
+	Relations                 []DatabaseRelationSchema     `json:"relations"`
 	GlobalAuthEntities        []GlobalAuthEntity
 	GraphQL                   *graphql.Schema
 	EventEmitter              *EventEmitter
@@ -27,6 +28,7 @@ type Engine struct {
 
 func Init(db *sql.DB) *Engine {
 	InitializeEngineDatabase(db)
+	relations, _ := GetEngineRelations(db)
 	databases, _ := GetDatabases(db)
 	models, err := InitializeModels(db)
 	if err != nil {
@@ -52,6 +54,7 @@ func Init(db *sql.DB) *Engine {
 		InternalSchemaName:        environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
 		Version:                   environment.GetEnvValue("VERSION"),
 		EventEmitter:              NewEventEmitter(),
+		Relations:                 relations,
 	}
 
 	engine.LoadGlobalAuth(db)
@@ -65,6 +68,8 @@ func (engine *Engine) Reload(db *sql.DB) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	databases, _ := GetDatabases(db)
+	relations, _ := GetEngineRelations(db)
+
 	models, err := InitializeModels(db)
 	if err != nil {
 		panic(err)
@@ -84,6 +89,7 @@ func (engine *Engine) Reload(db *sql.DB) {
 	engine.Databases = databases
 	engine.Models = models
 	engine.DatabaseToTableToModelMap = schema
+	engine.Relations = relations
 	engine.LoadGlobalAuth(db)
 	engine.LoadWebhooks(db)
 	engine.LoadDataTriggers(db)

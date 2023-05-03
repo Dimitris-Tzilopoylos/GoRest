@@ -24,11 +24,11 @@ type Index struct {
 }
 
 type ColumnInput struct {
-	Name          string
-	Type          string
-	MaxLength     int64
-	Nullable      bool
-	DefaultValue  interface{}
+	Name          string      `json:"name"`
+	Type          string      `json:"type"`
+	MaxLength     int64       `json:"maxLength"`
+	Nullable      bool        `json:"nullable"`
+	DefaultValue  interface{} `json:"defaultValue"`
 	AutoIncrement bool
 }
 

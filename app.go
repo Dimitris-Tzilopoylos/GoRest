@@ -26,6 +26,12 @@ func main() {
 	app.Post(LoginRoute, LoginHandler(app, db))
 	app.Post(RegisterRoute, RegisterHandler(app, db))
 
+	// RELATIONS ROUTES
+	app.Get(RelationsRoutes, GetRelations(app, db))
+	app.Post(RelationsRoutes, CreateRelation(app, db))
+	app.Put(RelationsRoutes, UpdateRelation(app, db))
+	app.Delete(RelationsRoutes, DeleteRelation(app, db))
+
 	// DATABASE ROUTES
 	app.Get(DatabasesRoutes, GetDatabases(app, db))
 	app.Post(DatabasesRoutes, CreateDatabase(app, db))

@@ -89,8 +89,13 @@ func DropDatabase(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		//OVER HERE DELETE ANY OTHER RELATED STUFF FROM ENGINE
+		// OVER HERE DELETE ANY OTHER RELATED STUFF FROM ENGINE
+		relationInput := database.DatabaseRelationSchema{
+			Database: dbname,
+		}
+		database.DeleteRelationsByDatabase(db, relationInput)
 
+		// RELOAD ENGINE IN MEMORY
 		app.Engine.Reload(db)
 
 		app.Json(res, http.StatusCreated, map[string]string{"message": fmt.Sprintf("Database %s successfully deleted", dbname)})
