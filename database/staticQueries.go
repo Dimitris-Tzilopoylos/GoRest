@@ -12,7 +12,7 @@ var EXCLUDED_SCHEMAS = []string{
 	"'hdb_catalog'",
 	"'hdb_views'",
 	"'audit'",
-	"'public'",
+	// "'public'",
 }
 
 const CREATE_DATABASE = `CREATE SCHEMA IF NOT EXISTS %s;`
