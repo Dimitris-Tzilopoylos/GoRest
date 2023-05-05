@@ -95,6 +95,11 @@ func DropDatabase(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		}
 		database.DeleteRelationsByDatabase(db, relationInput)
 
+		restHandlerInput := database.CustomRestHandlerInput{
+			Database: dbname,
+		}
+		app.Engine.DeleteRestHandlerByDatabase(db, restHandlerInput)
+
 		// RELOAD ENGINE IN MEMORY
 		app.Engine.Reload(db)
 

@@ -24,6 +24,8 @@ type Engine struct {
 	Version                   string
 	Webhooks                  map[string]map[string]map[string]map[string][]Webhook
 	DataTriggers              map[string]map[string]DataTrigger
+	RestHandlers              []CustomRestHandlerInput
+	RestHandlersMap           map[string]map[string]CustomRestHandlerInput
 }
 
 func Init(db *sql.DB) *Engine {
@@ -60,6 +62,7 @@ func Init(db *sql.DB) *Engine {
 	engine.LoadGlobalAuth(db)
 	engine.LoadWebhooks(db)
 	engine.LoadDataTriggers(db)
+	engine.LoadRestHandlers(db)
 	engine.BuildGraphQLSchema()
 	return engine
 }
@@ -93,6 +96,7 @@ func (engine *Engine) Reload(db *sql.DB) {
 	engine.LoadGlobalAuth(db)
 	engine.LoadWebhooks(db)
 	engine.LoadDataTriggers(db)
+	engine.LoadRestHandlers(db)
 	engine.BuildGraphQLSchema()
 }
 
@@ -148,23 +152,6 @@ func InitializeModels(db *sql.DB) ([]*Model, error) {
 	return models, nil
 }
 
-func GetEngineRelations(db *sql.DB) ([]DatabaseRelationSchema, error) {
-	var databaseRelation DatabaseRelationSchema
-	relations := []DatabaseRelationSchema{}
-	scanner := Query(db, GET_ENGINE_RELATIONS)
-	cb := func(rows *sql.Rows) error {
-		err := rows.Scan(&databaseRelation.Id, &databaseRelation.Alias, &databaseRelation.Database, &databaseRelation.FromTable, &databaseRelation.FromColumn, &databaseRelation.ToTable, &databaseRelation.ToColumn, &databaseRelation.RelationType)
-		if err != nil {
-			panic(err)
-		}
-		relations = append(relations, databaseRelation)
-		return err
-	}
-	err := scanner(cb)
-
-	return relations, err
-}
-
 func InitializeEngineDatabase(db *sql.DB) {
 	err := CreateDataBase(db, environment.GetEnvValue("INTERNAL_SCHEMA_NAME"))
 	if err != nil {
@@ -176,6 +163,7 @@ func InitializeEngineDatabase(db *sql.DB) {
 	CreateEngineDataTriggersTable(db)
 	CreateEngineRelationsTable(db)
 	CreateEngineApiKeysTable(db)
+	CreateEngineCustomEndopointsTable(db)
 }
 
 func CreateEngineLogsTable(db *sql.DB) {
@@ -668,4 +656,107 @@ func CreateEngineApiKeysTable(db *sql.DB) {
 
 	CreateIndexes(db, table)
 
+}
+
+func CreateEngineCustomEndopointsTable(db *sql.DB) {
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "endpoint",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "method",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "db",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:     "query",
+		Type:     "text",
+		Nullable: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "auth",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "enabled",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "created_at",
+		Type:         "timestamp",
+		Nullable:     false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+	})
+
+	indexes := []IndexInput{}
+
+	methodUniqueColumn := ColumnInput{
+		Name:      "method",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	endpointUniqueColumn := ColumnInput{
+		Name:      "endpoint",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	}
+
+	uniqueColumns := []ColumnInput{}
+
+	uniqueColumns = append(uniqueColumns, endpointUniqueColumn, methodUniqueColumn)
+
+	uniqueIndex := IndexInput{
+		Type:    UNIQUE,
+		Columns: uniqueColumns,
+	}
+
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
+
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	indexes = append(indexes, uniqueIndex, primaryIndex)
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "engine_rest_actions",
+		Columns:  columns,
+		Indexes:  indexes,
+	}
+
+	CreateTable(db, table)
+
+	CreateIndexes(db, table)
 }

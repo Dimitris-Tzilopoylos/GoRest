@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 func SelectQueryContext(ctx context.Context, db *sql.DB, query string, args ...any) func(func(rows *sql.Rows) error) error {
@@ -118,4 +119,18 @@ func TransactionQueryExec(ctx context.Context, db *sql.DB, callback func(context
 	}
 	err = tx.Commit()
 	return err
+}
+
+func CheckSQLStringValidity(db *sql.DB, query string) error {
+	if len(query) == 0 {
+		return fmt.Errorf("query was not provided")
+	}
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	return nil
+
 }

@@ -21,6 +21,23 @@ type DatabaseRelationSchema struct {
 	Table        string `json:"table"`
 }
 
+func GetEngineRelations(db *sql.DB) ([]DatabaseRelationSchema, error) {
+	var databaseRelation DatabaseRelationSchema
+	relations := []DatabaseRelationSchema{}
+	scanner := Query(db, GET_ENGINE_RELATIONS)
+	cb := func(rows *sql.Rows) error {
+		err := rows.Scan(&databaseRelation.Id, &databaseRelation.Alias, &databaseRelation.Database, &databaseRelation.FromTable, &databaseRelation.FromColumn, &databaseRelation.ToTable, &databaseRelation.ToColumn, &databaseRelation.RelationType)
+		if err != nil {
+			panic(err)
+		}
+		relations = append(relations, databaseRelation)
+		return err
+	}
+	err := scanner(cb)
+
+	return relations, err
+}
+
 func CreateRelation(db *sql.DB, relationInput DatabaseRelationSchema) error {
 	query := fmt.Sprintf(`INSERT INTO %s.relations(alias,db,from_table,to_table,from_column,to_column,relation) VALUES($1,$2,$3,$4,$5,$6,$7)`,
 		environment.GetEnvValue("INTERNAL_SCHEMA_NAME"))

@@ -66,6 +66,7 @@ type RouterMwConfig struct {
 type Router struct {
 	BaseUrl           string
 	AliveSince        string
+	httpVerbToStrMap  map[HttpVerb]string
 	routes            map[HttpVerb]map[string]*Route
 	urlKeys           map[HttpVerb][]string
 	mwPreHandlers     map[string][]RouterMwConfig
@@ -74,6 +75,7 @@ type Router struct {
 	Logger            *zap.Logger
 	EnableHttpLogging bool
 	EnableSQLLogging  bool
+	DB                *sql.DB
 }
 
 func (r *Router) Status(res http.ResponseWriter, statusCode int) *Router {
@@ -118,7 +120,16 @@ func (r *Router) NotFound(res http.ResponseWriter, req *http.Request) {
 }
 
 func NewApp(db *sql.DB) *Router {
-	r := &Router{}
+	r := &Router{
+		httpVerbToStrMap: map[HttpVerb]string{
+			POST:   "POST",
+			GET:    "GET",
+			PUT:    "PUT",
+			PATCH:  "PATCH",
+			DELETE: "DELETE",
+		},
+		DB: db,
+	}
 	r.Initialize()
 	r.Engine = database.Init(db)
 	return r
@@ -442,6 +453,25 @@ func (r *Router) GetHttpHandler(url string, method HttpVerb) (http.HandlerFunc, 
 	matchedUrl, params := r.MatchRoute(url, method, r.urlKeys[method])
 	route = r.routes[method][matchedUrl]
 	if route == nil {
+		// strMethod, ok := r.httpVerbToStrMap[method]
+		// if ok {
+		// 	customRestHandlersMap, ok := r.Engine.RestHandlersMap[strMethod]
+		// 	if ok {
+		// 		if strings.HasPrefix(url, r.BaseUrl) {
+		// 			url = "/" + strings.TrimLeft(url, r.BaseUrl)
+		// 		}
+		// 		input, ok := customRestHandlersMap[url]
+		// 		if ok {
+		// 			return r.HandleCustomRestHandler(input), []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
+		// 		}
+		// 		if strings.HasSuffix(url, "/") {
+		// 			input, ok := customRestHandlersMap[strings.TrimRight(url, "/")]
+		// 			if ok {
+		// 				return r.HandleCustomRestHandler(input), []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
+		// 			}
+		// 		}
+		// 	}
+		// }
 		return r.NotFound, []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
 	}
 	handler := route.handler
@@ -454,6 +484,7 @@ func (r *Router) GetHttpHandler(url string, method HttpVerb) (http.HandlerFunc, 
 		}
 		return HandlerWithContext(handler, "params", params), preHandlersWithContext
 	}
+
 	return r.NotFound, []func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)){}
 }
 
@@ -585,4 +616,78 @@ func (r *Router) RemoveAllLEventEmitteristeners() {
 
 func (r *Router) EmitEvent(eventName string, args ...any) {
 	r.Engine.EventEmitter.Emit(eventName, args...)
+}
+
+// NOT IN USE
+func (r *Router) HandleCustomRestHandler(input database.CustomRestHandlerInput) http.HandlerFunc {
+	if !input.Enabled {
+		return r.NotFound
+	}
+
+	if input.Auth && environment.GetEnvValue("DISABLE_AUTH") != "ON" {
+		return func(res http.ResponseWriter, req *http.Request) {
+			_, err := r.Engine.AuthenticateForDatabase(req, input.Database)
+			if err != nil {
+				r.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+				return
+			}
+
+			body := GetBody(req)
+			var args any
+			if parsed, ok := body["args"]; ok {
+				args = parsed
+			}
+			scanner := database.Query(r.DB, input.Query, args)
+			var result []any = make([]any, 0)
+			cb := func(rows *sql.Rows) error {
+				var row any
+				err := rows.Scan(&row)
+				if err != nil {
+					return err
+				}
+				result = append(result, row)
+				return err
+			}
+			err = scanner(cb)
+			if err != nil {
+				r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			r.Json(res, http.StatusAccepted, result)
+		}
+	} else {
+		return func(res http.ResponseWriter, req *http.Request) {
+
+			body := GetBody(req)
+			var args []any = make([]any, 0)
+			if parsed, ok := body["args"]; ok && input.Method != "GET" {
+				parsedArgs, err := database.IsArray(parsed)
+
+				if err == nil {
+					args = append(args, parsedArgs...)
+				}
+			}
+			scanner := database.Query(r.DB, input.Query, args...)
+
+			var result []struct{} = make([]struct{}, 0)
+			cb := func(rows *sql.Rows) error {
+				var row struct{}
+				err := rows.Scan(&row)
+				if err != nil {
+					return err
+				}
+				result = append(result, row)
+				return nil
+			}
+			err := scanner(cb)
+			if err != nil {
+				r.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			r.Json(res, http.StatusAccepted, result)
+		}
+	}
+
 }

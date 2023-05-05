@@ -30,3 +30,6 @@ var ColumnsRoute string = "/engine/databases/<str:database>/tables/<str:table>/c
 
 // INDEXES ROUTES
 var IndexesRoute string = "/engine/databases/<str:database>/tables/<str:table>/indexes"
+
+// CUSTOM REST HANDLERS
+var CustomRestHandlersRoute string = "/engine/rest-handlers"
