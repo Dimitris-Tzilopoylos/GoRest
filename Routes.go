@@ -6,7 +6,7 @@ var AliveRoute string = "/alive"
 
 // DATA ROUTES
 var QueryRoute string = "/<str:database>"
-var StatementRoute string = "/<str:database>/action"
+var StatementRoute string = "/<str:database>/actions"
 var ProcessMultipleStatementsRoute string = "/<str:database>/process"
 
 // AUTH ROUTES

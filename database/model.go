@@ -481,7 +481,7 @@ func (model *Model) Update(role string, ctx context.Context, tx *sql.Tx, body in
 		return nil, err
 	}
 
-	_set, ok := parsedBody["_set"]
+	_set, ok := parsedBody["set"]
 	if !ok {
 		_set = make(map[string]interface{})
 	}
