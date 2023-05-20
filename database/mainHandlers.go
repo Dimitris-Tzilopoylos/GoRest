@@ -7,6 +7,7 @@ import (
 )
 
 func (e *Engine) SelectExec(role string, db *sql.DB, database string, body interface{}) ([]byte, error) {
+
 	ctx := context.Background()
 	databaseExists := e.DatabaseExists(database)
 

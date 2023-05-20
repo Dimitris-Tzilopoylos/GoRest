@@ -2,12 +2,16 @@ package database
 
 import (
 	"application/environment"
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"strings"
 
-	"github.com/graphql-go/graphql"
+	"github.com/graph-gophers/graphql-go"
+	"github.com/graph-gophers/graphql-go/relay"
+	"github.com/graphql-go/graphql/language/ast"
+	gqlParser "github.com/graphql-go/graphql/language/parser"
 )
 
 var SqlToGqlTypeMap map[string]string = map[string]string{
@@ -42,34 +46,32 @@ var SqlAggValueToGqlTypeMap map[string]string = map[string]string{
 	"double":            "Float",
 }
 
-type GQLQuery struct{}
-
-type Object map[string]interface{}
-
-func (q *GQLQuery) Resolve(p graphql.ResolveParams) (interface{}, error) {
-	// logic to handle any query
-	return nil, nil
+type GraphQLRequestInput struct {
+	Query         string                 `json:"query"`
+	OperationName string                 `json:"operationName"`
+	Variables     map[string]interface{} `json:"variables"`
 }
 
-func (Object) ImplementsGraphQLType(name string) bool {
-	return name == "JSONObject"
-}
-
-func (j *Object) UnmarshalGraphQL(input interface{}) error {
-	switch input := input.(type) {
-	case string:
-		return json.Unmarshal([]byte(input), &j)
-	default:
-		return fmt.Errorf("invalid JSONObject value")
-	}
-}
-
-func (j Object) MarshalJSON() ([]byte, error) {
-	return json.Marshal(j)
+type EngineGraphQlDatabaseTableConfig struct {
+	Database   string
+	Table      string
+	ActionType string
 }
 
 type GraphQLEntity struct {
-	Schema string
+	Schema                                     string
+	ParsedSchema                               *graphql.Schema
+	Handler                                    *relay.Handler
+	EngineResolverNameToDatabaseTableConfigMap map[string]*EngineGraphQlDatabaseTableConfig
+}
+
+func (g *GraphQLEntity) ValidateGraphQlRequestInput(input *GraphQLRequestInput) error {
+	formattedQuery := strings.Trim(input.Query, " ")
+	if len(formattedQuery) == 0 {
+		return fmt.Errorf("please provide at least a query or a mutation")
+	}
+
+	return nil
 }
 
 func GetGraphqlAggregationTypeByColumn(column Column) (string, error) {
@@ -276,7 +278,7 @@ func BuildModelOrderByExp(model *Model) (string, error) {
 }
 
 func BuildModelBoolExp(model *Model) (string, error) {
-	typeName := fmt.Sprintf("input %s_%s_bool_by_exp", model.Database, model.Table)
+	typeName := fmt.Sprintf("input %s_%s_bool_exp", model.Database, model.Table)
 
 	fields := []string{}
 	for key := range model.ColumnsMap {
@@ -473,8 +475,8 @@ func WriteGraphQLSchemaToFile(schema string) {
 	if !shouldWrite {
 		return
 	}
-
-	err := ioutil.WriteFile("engine_graphql_schema.gql", []byte(schema), 0644)
+	schemaFileName := environment.GetEnvValueToStringWithDefault("GRAPHQL_SCHEMA_FILE_NAME", "engine_graphql_schema.gql")
+	err := ioutil.WriteFile(schemaFileName, []byte(schema), 0644)
 	if err != nil {
 		fmt.Println("Error writing schema file:", err)
 		return
@@ -609,7 +611,7 @@ func (e *Engine) BuildRootQueryType() ([]string, error) {
 			continue
 		}
 
-		fields = append(fields, fmt.Sprintf("%s_%s%s: %s_%s", model.Database, model.Table, BuildSelectTypeArgs(model), model.Database, model.Table))
+		fields = append(fields, fmt.Sprintf("%s_%s%s: [%s_%s!]", model.Database, model.Table, BuildSelectTypeArgs(model), model.Database, model.Table))
 		fields = append(fields, fmt.Sprintf("%s_%s_aggregate%s: %s_%s_aggregate", model.Database, model.Table, BuildSelectAggregateTypeArgs(model), model.Database, model.Table))
 
 	}
@@ -637,7 +639,41 @@ func (e *Engine) BuildRootMutationType() ([]string, error) {
 	return []string{str}, nil
 }
 
-func (e *Engine) BuildGraphQLSchema() {
+func (e *Engine) BuildEngineGraphqlConfig() map[string]*EngineGraphQlDatabaseTableConfig {
+	config := make(map[string]*EngineGraphQlDatabaseTableConfig)
+	for _, model := range e.Models {
+		resolverBaseName := fmt.Sprintf("%s_%s", model.Database, model.Table)
+		config[resolverBaseName] = &EngineGraphQlDatabaseTableConfig{
+			Database:   model.Database,
+			Table:      model.Table,
+			ActionType: "SELECT",
+		}
+		config[fmt.Sprintf("%s_aggregate", resolverBaseName)] = &EngineGraphQlDatabaseTableConfig{
+			Database:   model.Database,
+			Table:      model.Table,
+			ActionType: "SELECT",
+		}
+		config[fmt.Sprintf("%s_insert", resolverBaseName)] = &EngineGraphQlDatabaseTableConfig{
+			Database:   model.Database,
+			Table:      model.Table,
+			ActionType: "INSERT",
+		}
+		config[fmt.Sprintf("%s_update", resolverBaseName)] = &EngineGraphQlDatabaseTableConfig{
+			Database:   model.Database,
+			Table:      model.Table,
+			ActionType: "UPDATE",
+		}
+		config[fmt.Sprintf("%s_delete", resolverBaseName)] = &EngineGraphQlDatabaseTableConfig{
+			Database:   model.Database,
+			Table:      model.Table,
+			ActionType: "DELETE",
+		}
+	}
+
+	return config
+}
+
+func (e *Engine) LoadGraphql() {
 
 	orderBy := []string{GetOrderByEnum()}
 	scalarsAndDefaultInputs := []string{GetScalarsAndInputs()}
@@ -664,5 +700,297 @@ func (e *Engine) BuildGraphQLSchema() {
 
 	schemaStr := strings.Join(parts, "\n")
 	WriteGraphQLSchemaToFile(schemaStr)
+	config := e.BuildEngineGraphqlConfig()
+	e.GraphQL = &GraphQLEntity{
+		Schema: schemaStr,
+		EngineResolverNameToDatabaseTableConfigMap: config,
+	}
+	schema := graphql.MustParseSchema(schemaStr, nil)
+	e.GraphQL.ParsedSchema = schema
+	e.GraphQL.Handler = &relay.Handler{Schema: schema}
 
+}
+
+func astToMap(node ast.Node, variables map[string]interface{}, isAggregate bool) interface{} {
+	switch node := node.(type) {
+	case *ast.Document:
+		return astToMap(node.Definitions[0], variables, isAggregate)
+	case *ast.OperationDefinition:
+		return astToMap(node.SelectionSet, variables, isAggregate)
+	case *ast.SelectionSet:
+		result := NewOrderedMap()
+		for _, selection := range node.Selections {
+			switch selection := selection.(type) {
+			case *ast.Field:
+				result.Set(selection.Name.Value, astToMap(selection, variables, isAggregate))
+			case *ast.FragmentSpread:
+
+				// Handle fragment spread if needed
+				// Example: result["fragmentSpread"] = handleFragmentSpread(selection)
+			default:
+
+				// Handle other types of selections if needed
+			}
+		}
+		return result
+	case *ast.Field:
+		result := make(map[string]interface{})
+		isAggregation := strings.HasSuffix(node.Name.Value, "_aggregate") || isAggregate
+
+		if len(node.Arguments) > 0 {
+			arguments := make(map[string]interface{})
+			for _, arg := range node.Arguments {
+				argName := arg.Name.Value
+				argValue := astToMap(arg.Value, variables, isAggregation)
+				arguments[argName] = argValue
+			}
+			for key, value := range arguments {
+				result[key] = value
+			}
+		}
+		if node.SelectionSet != nil {
+			selectionSet := astToMap(node.SelectionSet, variables, isAggregation)
+			parsedSelectionSet, err := IsMapToInterface(selectionSet)
+			if err != nil {
+				return result
+			}
+			selectMap := make(map[string]any)
+			for key, value := range parsedSelectionSet {
+				parsedValue, err := IsMapToInterface(value)
+				if err != nil {
+					if isAggregation {
+						result[fmt.Sprintf("_%s", key)] = value
+					} else {
+						selectMap[key] = value
+					}
+				} else {
+					if len(parsedValue) == 0 {
+
+						if isAggregation {
+							if isAggregate {
+								result[key] = true
+							} else {
+								result[fmt.Sprintf("_%s", key)] = true
+							}
+						} else {
+							selectMap[key] = true
+						}
+					} else {
+						if isAggregation {
+							keys := []any{}
+							for key := range parsedValue {
+								keys = append(keys, key)
+							}
+							result[fmt.Sprintf("_%s", key)] = keys
+						} else {
+							result[key] = parsedValue
+						}
+					}
+				}
+			}
+			if isAggregation {
+				for key, value := range selectMap {
+					result[key] = value
+				}
+			} else {
+				if len(selectMap) > 0 {
+					result["_select"] = selectMap
+				}
+			}
+		}
+		return result
+	case *ast.Variable:
+		if value, ok := variables[node.Name.Value]; ok {
+			return value
+		}
+		return nil
+	case *ast.IntValue:
+		return node.Value
+	case *ast.FloatValue:
+		return node.Value
+	case *ast.StringValue:
+		return node.Value
+	case *ast.BooleanValue:
+		return node.Value
+	case *ast.EnumValue:
+		return node.Value
+	case *ast.ObjectValue:
+		obj := make(map[string]interface{})
+		for _, field := range node.Fields {
+			obj[field.Name.Value] = astToMap(field.Value, variables, isAggregate)
+		}
+		return obj
+	case *ast.ListValue:
+		list := make([]interface{}, len(node.Values))
+		for i, value := range node.Values {
+			list[i] = astToMap(value, variables, isAggregate)
+		}
+		return list
+	default:
+		return nil
+	}
+}
+func (g *GraphQLEntity) GraphqlParser(input string, variables map[string]any) (any, error) {
+	if len(strings.Trim(input, " ")) == 0 {
+		return nil, fmt.Errorf("no query provided")
+	}
+	ast, err := gqlParser.Parse(gqlParser.ParseParams{
+		Source: input,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if variables == nil {
+		variables = make(map[string]any)
+	}
+	return astToMap(ast, variables, false), err
+}
+
+func (e *Engine) GraphqlQueryResolve(inputData GraphQLRequestInput, role string, db *sql.DB) ([]byte, error) {
+	selectBody, err := e.GraphQL.GraphqlParser(inputData.Query, inputData.Variables)
+	if err != nil {
+		return []byte{}, nil
+	}
+
+	parsedSelectBody, err := IsOrderedMap(selectBody)
+
+	if err != nil {
+
+		return nil, err
+	}
+
+	configByDatabase := make(map[string]map[string]any)
+
+	for key, value := range parsedSelectBody.GetMap() {
+		config, ok := e.GraphQL.EngineResolverNameToDatabaseTableConfigMap[key]
+		if !ok {
+			return nil, fmt.Errorf("no such relation")
+		}
+		if config.ActionType != "SELECT" {
+			continue
+		}
+		if _, ok := configByDatabase[config.Database]; !ok {
+			configByDatabase[config.Database] = make(map[string]any)
+		}
+		isAggregate := strings.HasSuffix(key, "_aggregate")
+		if isAggregate {
+			configByDatabase[config.Database][fmt.Sprintf("%s_aggregate", config.Table)] = value
+		} else {
+			configByDatabase[config.Database][config.Table] = value
+		}
+	}
+
+	results := []byte{}
+	for dbName, payload := range configByDatabase {
+		result, err := e.SelectExec(role, db, dbName, payload)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, result...)
+	}
+
+	return results, nil
+}
+
+func (e *Engine) GraphqlMutationResolve(inputData GraphQLRequestInput, role string, db *sql.DB) (any, error) {
+	actionBody, err := e.GraphQL.GraphqlParser(inputData.Query, inputData.Variables)
+	if err != nil {
+		return map[string]any{}, nil
+	}
+	parsedActionBody, err := IsOrderedMap(actionBody)
+	if err != nil {
+		return nil, err
+	}
+
+	configByDatabase := make(map[string][]any)
+	var iterErr error
+	parsedActionBody.Iter(func(key string, value any) {
+		config, ok := e.GraphQL.EngineResolverNameToDatabaseTableConfigMap[key]
+		if !ok {
+			iterErr = fmt.Errorf("no such relation")
+		}
+		if config.ActionType == "SELECT" {
+			return
+		}
+		if _, ok := configByDatabase[config.Database]; !ok {
+			configByDatabase[config.Database] = make([]any, 0)
+		}
+		switch config.ActionType {
+		case "INSERT":
+			payload := make(map[string]any)
+			parsedValue, err := IsMapToInterface(value)
+			if err != nil {
+				iterErr = err
+				return
+			}
+			insertInput, ok := parsedValue["args"]
+			if !ok {
+				iterErr = fmt.Errorf("no insert input provided")
+				return
+			}
+			payload[config.Table] = insertInput
+			configByDatabase[config.Database] = append(configByDatabase[config.Database], map[string]any{
+				"insert": payload,
+			})
+		case "UPDATE":
+			payload := make(map[string]any)
+			payload[config.Table] = value
+			configByDatabase[config.Database] = append(configByDatabase[config.Database], map[string]any{
+				"update": payload,
+			})
+		case "DELETE":
+			payload := make(map[string]any)
+			payload[config.Table] = value
+			configByDatabase[config.Database] = append(configByDatabase[config.Database], map[string]any{
+				"delete": payload,
+			})
+		default:
+			iterErr = fmt.Errorf("unknown database operation %s", config.ActionType)
+			return
+		}
+	})
+	if iterErr != nil {
+		return nil, iterErr
+	}
+
+	results := make(map[string]any)
+
+	for dbName, value := range configByDatabase {
+		body := map[string]any{
+			"transactions": value,
+		}
+		result, err := e.Process(role, db, dbName, body)
+		if err != nil {
+			return nil, err
+		}
+		results[dbName] = result
+	}
+
+	return results, nil
+}
+
+func (e *Engine) GraphiQL() func(http.ResponseWriter) {
+
+	return func(res http.ResponseWriter) {
+		res.Write([]byte(GetGraphiqlTemplate()))
+	}
+}
+
+func (e *Engine) GetIntrospectionQueryPayload() ([]byte, error) {
+
+	return e.GraphQL.Handler.Schema.ToJSON()
+}
+
+func (e *Engine) GetIntrospectionQueryResponse() ([]byte, error) {
+	payload, err := e.GetIntrospectionQueryPayload()
+	if err != nil {
+		return nil, err
+	}
+	resp := []byte{}
+	resp = append(resp, []byte("{\"data\":")...)
+	resp = append(resp, payload...)
+	resp = append(resp, []byte("}")...)
+	return resp, nil
 }

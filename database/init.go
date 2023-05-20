@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"log"
 	"sync"
-
-	"github.com/graphql-go/graphql"
 )
 
 var mutex sync.Mutex
@@ -18,7 +16,7 @@ type Engine struct {
 	DatabaseToTableToModelMap map[string]map[string]*Model `json:"schema"`
 	Relations                 []DatabaseRelationSchema     `json:"relations"`
 	GlobalAuthEntities        []GlobalAuthEntity
-	GraphQL                   *graphql.Schema
+	GraphQL                   *GraphQLEntity
 	EventEmitter              *EventEmitter
 	InternalSchemaName        string
 	Version                   string
@@ -63,7 +61,7 @@ func Init(db *sql.DB) *Engine {
 	engine.LoadWebhooks(db)
 	engine.LoadDataTriggers(db)
 	engine.LoadRestHandlers(db)
-	engine.BuildGraphQLSchema()
+	engine.LoadGraphql()
 	return engine
 }
 
@@ -97,7 +95,7 @@ func (engine *Engine) Reload(db *sql.DB) {
 	engine.LoadWebhooks(db)
 	engine.LoadDataTriggers(db)
 	engine.LoadRestHandlers(db)
-	engine.BuildGraphQLSchema()
+	engine.LoadGraphql()
 }
 
 func InitializeModels(db *sql.DB) ([]*Model, error) {

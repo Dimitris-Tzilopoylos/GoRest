@@ -18,6 +18,17 @@ func Find[T any](s []T, f func(T) bool) *T {
 	return nil
 }
 
+func IsOrderedMap(arg interface{}) (OrderedMap, error) {
+	switch args := arg.(type) {
+	case OrderedMap:
+		return args, nil
+	case *OrderedMap:
+		return *args, nil
+	default:
+		return OrderedMap{}, fmt.Errorf("type of interface is not map[string]interface{}")
+	}
+}
+
 func IsMapToInterface(arg interface{}) (map[string]interface{}, error) {
 	switch args := arg.(type) {
 	case map[string]interface{}:

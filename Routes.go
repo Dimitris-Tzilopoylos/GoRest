@@ -1,5 +1,7 @@
 package main
 
+import "application/environment"
+
 //BASE ROUTES
 var HomeRoute string = "/"
 var AliveRoute string = "/alive"
@@ -33,3 +35,6 @@ var IndexesRoute string = "/engine/databases/<str:database>/tables/<str:table>/i
 
 // CUSTOM REST HANDLERS
 var CustomRestHandlersRoute string = "/engine/rest-handlers"
+
+var GraphQLRoute string = environment.GetEnvValueToStringWithDefault("GRAPHQL_ENDPOINT", "/graphql")
+var GraphiQLRoute string = environment.GetEnvValueToStringWithDefault("GRAPHIQL_ENDPOINT", GraphQLRoute)

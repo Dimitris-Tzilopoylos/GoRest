@@ -28,3 +28,13 @@ func GetEnvValueToIntWithDefault(key string, defaultVal int) int {
 
 	return x
 }
+
+func GetEnvValueToStringWithDefault(key string, defaultVal string) string {
+	value := os.Getenv(key)
+
+	if len(value) == 0 {
+		return defaultVal
+	}
+
+	return value
+}
