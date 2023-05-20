@@ -238,14 +238,6 @@ _text_search: SingleValue
 }`
 }
 
-// func BuildRelationalAggregationQueryFields(model *Model) ([]string, error) {
-
-// }
-
-// func BuildRelationalQueryFields(model *Model) ([]string, error) {
-
-// }
-
 func RemoveRequiredSuffixFromGQLType(fields []string) []string {
 	newFields := []string{}
 	for _, field := range fields {
@@ -312,9 +304,9 @@ func BuildQueryTypeFields(model *Model) ([]string, error) {
 
 func BuildSelectAggregateTypeArgs(model *Model) string {
 	_where := fmt.Sprintf("_where: %s_%s_bool_exp", model.Database, model.Table)
-	_groupBy := fmt.Sprintf("_groupBy: %s_%s_enum", model.Database, model.Table)
+	_groupBy := fmt.Sprintf("_groupBy: [%s_%s_enum]", model.Database, model.Table)
 	_orderBy := fmt.Sprintf("_orderBy: %s_%s_order_by_exp", model.Database, model.Table)
-	_distinct := fmt.Sprintf("_distinct: %s_%s_enum", model.Database, model.Table)
+	_distinct := fmt.Sprintf("_distinct: [%s_%s_enum]", model.Database, model.Table)
 
 	arr := []string{
 		_where,
@@ -327,9 +319,9 @@ func BuildSelectAggregateTypeArgs(model *Model) string {
 
 func BuildSelectTypeArgs(model *Model) string {
 	_where := fmt.Sprintf("_where: %s_%s_bool_exp", model.Database, model.Table)
-	_groupBy := fmt.Sprintf("_groupBy: %s_%s_enum", model.Database, model.Table)
+	_groupBy := fmt.Sprintf("_groupBy: [%s_%s_enum]", model.Database, model.Table)
 	_orderBy := fmt.Sprintf("_orderBy: %s_%s_order_by_exp", model.Database, model.Table)
-	_distinct := fmt.Sprintf("_distinct: %s_%s_enum", model.Database, model.Table)
+	_distinct := fmt.Sprintf("_distinct: [%s_%s_enum]", model.Database, model.Table)
 	_limit := "_limit: Int"
 	_offset := "_offset: Int"
 	arr := []string{
@@ -711,125 +703,6 @@ func (e *Engine) LoadGraphql() {
 
 }
 
-func astToMap(node ast.Node, variables map[string]interface{}, isAggregate bool) interface{} {
-	switch node := node.(type) {
-	case *ast.Document:
-		return astToMap(node.Definitions[0], variables, isAggregate)
-	case *ast.OperationDefinition:
-		return astToMap(node.SelectionSet, variables, isAggregate)
-	case *ast.SelectionSet:
-		result := NewOrderedMap()
-		for _, selection := range node.Selections {
-			switch selection := selection.(type) {
-			case *ast.Field:
-				result.Set(selection.Name.Value, astToMap(selection, variables, isAggregate))
-			case *ast.FragmentSpread:
-
-				// Handle fragment spread if needed
-				// Example: result["fragmentSpread"] = handleFragmentSpread(selection)
-			default:
-
-				// Handle other types of selections if needed
-			}
-		}
-		return result
-	case *ast.Field:
-		result := make(map[string]interface{})
-		isAggregation := strings.HasSuffix(node.Name.Value, "_aggregate") || isAggregate
-
-		if len(node.Arguments) > 0 {
-			arguments := make(map[string]interface{})
-			for _, arg := range node.Arguments {
-				argName := arg.Name.Value
-				argValue := astToMap(arg.Value, variables, isAggregation)
-				arguments[argName] = argValue
-			}
-			for key, value := range arguments {
-				result[key] = value
-			}
-		}
-		if node.SelectionSet != nil {
-			selectionSet := astToMap(node.SelectionSet, variables, isAggregation)
-			parsedSelectionSet, err := IsMapToInterface(selectionSet)
-			if err != nil {
-				return result
-			}
-			selectMap := make(map[string]any)
-			for key, value := range parsedSelectionSet {
-				parsedValue, err := IsMapToInterface(value)
-				if err != nil {
-					if isAggregation {
-						result[fmt.Sprintf("_%s", key)] = value
-					} else {
-						selectMap[key] = value
-					}
-				} else {
-					if len(parsedValue) == 0 {
-
-						if isAggregation {
-							if isAggregate {
-								result[key] = true
-							} else {
-								result[fmt.Sprintf("_%s", key)] = true
-							}
-						} else {
-							selectMap[key] = true
-						}
-					} else {
-						if isAggregation {
-							keys := []any{}
-							for key := range parsedValue {
-								keys = append(keys, key)
-							}
-							result[fmt.Sprintf("_%s", key)] = keys
-						} else {
-							result[key] = parsedValue
-						}
-					}
-				}
-			}
-			if isAggregation {
-				for key, value := range selectMap {
-					result[key] = value
-				}
-			} else {
-				if len(selectMap) > 0 {
-					result["_select"] = selectMap
-				}
-			}
-		}
-		return result
-	case *ast.Variable:
-		if value, ok := variables[node.Name.Value]; ok {
-			return value
-		}
-		return nil
-	case *ast.IntValue:
-		return node.Value
-	case *ast.FloatValue:
-		return node.Value
-	case *ast.StringValue:
-		return node.Value
-	case *ast.BooleanValue:
-		return node.Value
-	case *ast.EnumValue:
-		return node.Value
-	case *ast.ObjectValue:
-		obj := make(map[string]interface{})
-		for _, field := range node.Fields {
-			obj[field.Name.Value] = astToMap(field.Value, variables, isAggregate)
-		}
-		return obj
-	case *ast.ListValue:
-		list := make([]interface{}, len(node.Values))
-		for i, value := range node.Values {
-			list[i] = astToMap(value, variables, isAggregate)
-		}
-		return list
-	default:
-		return nil
-	}
-}
 func (g *GraphQLEntity) GraphqlParser(input string, variables map[string]any) (any, error) {
 	if len(strings.Trim(input, " ")) == 0 {
 		return nil, fmt.Errorf("no query provided")
@@ -993,4 +866,124 @@ func (e *Engine) GetIntrospectionQueryResponse() ([]byte, error) {
 	resp = append(resp, payload...)
 	resp = append(resp, []byte("}")...)
 	return resp, nil
+}
+
+func astToMap(node ast.Node, variables map[string]interface{}, isAggregate bool) interface{} {
+	switch node := node.(type) {
+	case *ast.Document:
+		return astToMap(node.Definitions[0], variables, isAggregate)
+	case *ast.OperationDefinition:
+		return astToMap(node.SelectionSet, variables, isAggregate)
+	case *ast.SelectionSet:
+		result := NewOrderedMap()
+		for _, selection := range node.Selections {
+			switch selection := selection.(type) {
+			case *ast.Field:
+				result.Set(selection.Name.Value, astToMap(selection, variables, isAggregate))
+			case *ast.FragmentSpread:
+
+				// Handle fragment spread if needed
+				// Example: result["fragmentSpread"] = handleFragmentSpread(selection)
+			default:
+
+				// Handle other types of selections if needed
+			}
+		}
+		return result
+	case *ast.Field:
+		result := make(map[string]interface{})
+		isAggregation := strings.HasSuffix(node.Name.Value, "_aggregate") || isAggregate
+
+		if len(node.Arguments) > 0 {
+			arguments := make(map[string]interface{})
+			for _, arg := range node.Arguments {
+				argName := arg.Name.Value
+				argValue := astToMap(arg.Value, variables, isAggregation)
+				arguments[argName] = argValue
+			}
+			for key, value := range arguments {
+				result[key] = value
+			}
+		}
+		if node.SelectionSet != nil {
+			selectionSet := astToMap(node.SelectionSet, variables, isAggregation)
+			parsedSelectionSet, err := IsMapToInterface(selectionSet)
+			if err != nil {
+				return result
+			}
+			selectMap := make(map[string]any)
+			for key, value := range parsedSelectionSet {
+				parsedValue, err := IsMapToInterface(value)
+				if err != nil {
+					if isAggregation {
+						result[fmt.Sprintf("_%s", key)] = value
+					} else {
+						selectMap[key] = value
+					}
+				} else {
+					if len(parsedValue) == 0 {
+
+						if isAggregation {
+							if isAggregate {
+								result[key] = true
+							} else {
+								result[fmt.Sprintf("_%s", key)] = true
+							}
+						} else {
+							selectMap[key] = true
+						}
+					} else {
+						if isAggregation {
+							keys := []any{}
+							for key := range parsedValue {
+								keys = append(keys, key)
+							}
+							result[fmt.Sprintf("_%s", key)] = keys
+						} else {
+							result[key] = parsedValue
+						}
+					}
+				}
+			}
+			if isAggregation {
+				for key, value := range selectMap {
+					result[key] = value
+				}
+			} else {
+				if len(selectMap) > 0 {
+					result["_select"] = selectMap
+				}
+			}
+		}
+		return result
+	case *ast.Variable:
+		if value, ok := variables[node.Name.Value]; ok {
+			return value
+		}
+		return nil
+	case *ast.IntValue:
+		return node.Value
+	case *ast.FloatValue:
+		return node.Value
+	case *ast.StringValue:
+		return node.Value
+	case *ast.BooleanValue:
+		return node.Value
+	case *ast.EnumValue:
+		return node.Value
+	case *ast.ObjectValue:
+		obj := make(map[string]interface{})
+		for _, field := range node.Fields {
+			obj[field.Name.Value] = astToMap(field.Value, variables, isAggregate)
+		}
+		return obj
+	case *ast.ListValue:
+		list := make([]interface{}, len(node.Values))
+		for i, value := range node.Values {
+			list[i] = astToMap(value, variables, isAggregate)
+		}
+		return list
+	default:
+		return nil
+	}
 }
