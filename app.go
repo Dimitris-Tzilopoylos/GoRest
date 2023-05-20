@@ -59,7 +59,9 @@ func main() {
 	app.Delete(IndexesRoute, DropIndex(app, db))
 
 	// GRAPHQL ROUTES
+	app.Use(GraphiQLRoute, AuthMainMiddleware(app))
 	app.Get(GraphiQLRoute, GraphqlIntrospection(app, db))
+	app.Use(GraphQLRoute, AuthMainMiddleware(app))
 	app.Post(GraphQLRoute, GraphqlHandler(app, db))
 
 	app.Listen()

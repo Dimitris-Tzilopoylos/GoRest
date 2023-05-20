@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/graphql-go/graphql/language/ast"
@@ -703,6 +704,35 @@ func (e *Engine) LoadGraphql() {
 
 }
 
+func ShouldAuthenticate() bool {
+	return environment.GetEnvValue("DISABLE_AUTH") != "ON"
+}
+
+func CanAccess(config EngineGraphQlDatabaseTableConfig, auth jwt.MapClaims) error {
+	if !ShouldAuthenticate() {
+		return nil
+	}
+
+	if auth == nil {
+		return fmt.Errorf("Unauthorized")
+	}
+
+	database, ok := auth["database"]
+	if !ok {
+		return fmt.Errorf("Unauthorized")
+	}
+
+	dbName, ok := database.(string)
+	if !ok {
+		return fmt.Errorf("Unauthorized")
+	}
+	if config.Database != dbName {
+		return fmt.Errorf("Unauthorized")
+	}
+
+	return nil
+}
+
 func (g *GraphQLEntity) GraphqlParser(input string, variables map[string]any) (any, error) {
 	if len(strings.Trim(input, " ")) == 0 {
 		return nil, fmt.Errorf("no query provided")
@@ -721,13 +751,9 @@ func (g *GraphQLEntity) GraphqlParser(input string, variables map[string]any) (a
 	return astToMap(ast, variables, false), err
 }
 
-func (e *Engine) GraphqlQueryResolve(inputData GraphQLRequestInput, role string, db *sql.DB) ([]byte, error) {
-	selectBody, err := e.GraphQL.GraphqlParser(inputData.Query, inputData.Variables)
-	if err != nil {
-		return []byte{}, nil
-	}
+func (e *Engine) GraphqlQueryResolve(inputData any, auth jwt.MapClaims, db *sql.DB) ([]byte, error) {
 
-	parsedSelectBody, err := IsOrderedMap(selectBody)
+	parsedSelectBody, err := IsOrderedMap(inputData)
 
 	if err != nil {
 
@@ -744,6 +770,10 @@ func (e *Engine) GraphqlQueryResolve(inputData GraphQLRequestInput, role string,
 		if config.ActionType != "SELECT" {
 			continue
 		}
+		errAuth := CanAccess(*config, auth)
+		if errAuth != nil {
+			return nil, errAuth
+		}
 		if _, ok := configByDatabase[config.Database]; !ok {
 			configByDatabase[config.Database] = make(map[string]any)
 		}
@@ -757,7 +787,7 @@ func (e *Engine) GraphqlQueryResolve(inputData GraphQLRequestInput, role string,
 
 	results := []byte{}
 	for dbName, payload := range configByDatabase {
-		result, err := e.SelectExec(role, db, dbName, payload)
+		result, err := e.SelectExec("", db, dbName, payload)
 		if err != nil {
 			return nil, err
 		}
@@ -767,12 +797,9 @@ func (e *Engine) GraphqlQueryResolve(inputData GraphQLRequestInput, role string,
 	return results, nil
 }
 
-func (e *Engine) GraphqlMutationResolve(inputData GraphQLRequestInput, role string, db *sql.DB) (any, error) {
-	actionBody, err := e.GraphQL.GraphqlParser(inputData.Query, inputData.Variables)
-	if err != nil {
-		return map[string]any{}, nil
-	}
-	parsedActionBody, err := IsOrderedMap(actionBody)
+func (e *Engine) GraphqlMutationResolve(inputData any, auth jwt.MapClaims, db *sql.DB) (any, error) {
+
+	parsedActionBody, err := IsOrderedMap(inputData)
 	if err != nil {
 		return nil, err
 	}
@@ -780,11 +807,18 @@ func (e *Engine) GraphqlMutationResolve(inputData GraphQLRequestInput, role stri
 	configByDatabase := make(map[string][]any)
 	var iterErr error
 	parsedActionBody.Iter(func(key string, value any) {
+		if iterErr != nil {
+			return
+		}
 		config, ok := e.GraphQL.EngineResolverNameToDatabaseTableConfigMap[key]
 		if !ok {
 			iterErr = fmt.Errorf("no such relation")
 		}
 		if config.ActionType == "SELECT" {
+			return
+		}
+		iterErr = CanAccess(*config, auth)
+		if iterErr != nil {
 			return
 		}
 		if _, ok := configByDatabase[config.Database]; !ok {
@@ -834,7 +868,7 @@ func (e *Engine) GraphqlMutationResolve(inputData GraphQLRequestInput, role stri
 		body := map[string]any{
 			"transactions": value,
 		}
-		result, err := e.Process(role, db, dbName, body)
+		result, err := e.Process("", db, dbName, body)
 		if err != nil {
 			return nil, err
 		}

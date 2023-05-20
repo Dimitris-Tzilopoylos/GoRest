@@ -22,6 +22,7 @@ func GraphqlIntrospection(app *engine.Router, db *sql.DB) http.HandlerFunc {
 
 func GraphqlHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
+		auth := engine.GetAuth(req)
 		body, err := engine.GetBodyIntoStruct(req, &database.GraphQLRequestInput{})
 		if err != nil {
 			app.ErrorResponse(res, http.StatusBadRequest, err.Error())
@@ -47,7 +48,12 @@ func GraphqlHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		queryResults, err := app.Engine.GraphqlQueryResolve(*body, "", db)
+		parsedBody, err := app.Engine.GraphQL.GraphqlParser(body.Query, body.Variables)
+		if err != nil {
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			return
+		}
+		queryResults, err := app.Engine.GraphqlQueryResolve(parsedBody, auth, db)
 		if err != nil {
 			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
@@ -66,7 +72,7 @@ func GraphqlHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
 
 		resolveResults["data"] = queryParsedResults
 
-		mutationResults, err := app.Engine.GraphqlMutationResolve(*body, "", db)
+		mutationResults, err := app.Engine.GraphqlMutationResolve(parsedBody, auth, db)
 		if err != nil {
 			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
@@ -82,8 +88,9 @@ func GraphqlHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		for key, value := range parsedMutationResults {
 			mutationResponsePayload[key] = value
 		}
-
-		resolveResults["actionData"] = mutationResponsePayload
+		if len(mutationResponsePayload) > 0 {
+			resolveResults["data"] = mutationResponsePayload
+		}
 
 		app.Json(res, http.StatusOK, resolveResults)
 
