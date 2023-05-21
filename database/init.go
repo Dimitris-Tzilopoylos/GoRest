@@ -15,6 +15,7 @@ type Engine struct {
 	Models                    []*Model                     `json:"models"`
 	DatabaseToTableToModelMap map[string]map[string]*Model `json:"schema"`
 	Relations                 []DatabaseRelationSchema     `json:"relations"`
+	EngineRLS                 []RLS
 	GlobalAuthEntities        []GlobalAuthEntity
 	GraphQL                   *GraphQLEntity
 	EventEmitter              *EventEmitter
@@ -28,6 +29,13 @@ type Engine struct {
 
 func Init(db *sql.DB) *Engine {
 	InitializeEngineDatabase(db)
+	engine := &Engine{
+		GlobalAuthEntities: make([]GlobalAuthEntity, 0),
+		InternalSchemaName: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Version:            environment.GetEnvValue("VERSION"),
+		EventEmitter:       NewEventEmitter(),
+	}
+	engine.LoadRLS(db)
 	relations, _ := GetEngineRelations(db)
 	databases, _ := GetDatabases(db)
 	models, err := InitializeModels(db)
@@ -43,20 +51,14 @@ func Init(db *sql.DB) *Engine {
 		if !ok {
 			schema[database] = make(map[string]*Model)
 		}
+		model.LoadModelRLS(engine.EngineRLS)
 		schema[database][table] = model
 	}
 
-	engine := &Engine{
-		Databases:                 databases,
-		Models:                    models,
-		DatabaseToTableToModelMap: schema,
-		GlobalAuthEntities:        make([]GlobalAuthEntity, 0),
-		InternalSchemaName:        environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
-		Version:                   environment.GetEnvValue("VERSION"),
-		EventEmitter:              NewEventEmitter(),
-		Relations:                 relations,
-	}
-
+	engine.Databases = databases
+	engine.Models = models
+	engine.DatabaseToTableToModelMap = schema
+	engine.Relations = relations
 	engine.LoadGlobalAuth(db)
 	engine.LoadWebhooks(db)
 	engine.LoadDataTriggers(db)
@@ -68,6 +70,7 @@ func Init(db *sql.DB) *Engine {
 func (engine *Engine) Reload(db *sql.DB) {
 	mutex.Lock()
 	defer mutex.Unlock()
+	engine.LoadRLS(db)
 	databases, _ := GetDatabases(db)
 	relations, _ := GetEngineRelations(db)
 
@@ -84,6 +87,7 @@ func (engine *Engine) Reload(db *sql.DB) {
 		if !ok {
 			schema[database] = make(map[string]*Model)
 		}
+		model.LoadModelRLS(engine.EngineRLS)
 		schema[database][table] = model
 	}
 
@@ -162,6 +166,7 @@ func InitializeEngineDatabase(db *sql.DB) {
 	CreateEngineRelationsTable(db)
 	CreateEngineApiKeysTable(db)
 	CreateEngineCustomEndopointsTable(db)
+	CreateEngineRowLevelSecurityTable(db)
 }
 
 func CreateEngineLogsTable(db *sql.DB) {
@@ -750,6 +755,98 @@ func CreateEngineCustomEndopointsTable(db *sql.DB) {
 	table := TableInput{
 		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
 		Name:     "engine_rest_actions",
+		Columns:  columns,
+		Indexes:  indexes,
+	}
+
+	CreateTable(db, table)
+
+	CreateIndexes(db, table)
+}
+
+func CreateEngineRowLevelSecurityTable(db *sql.DB) {
+	DropTable(db, TableInput{Database: "root_engine", Name: "engine_row_level_security"})
+	columns := []ColumnInput{}
+	columns = append(columns, ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "db",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "tbl",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "policy_type",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "policy_name",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:      "policy_for",
+		Type:      "varchar",
+		Nullable:  false,
+		MaxLength: 255,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "enabled",
+		Type:         "boolean",
+		Nullable:     false,
+		DefaultValue: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:     "sql_input",
+		Type:     "text",
+		Nullable: false,
+	})
+	columns = append(columns, ColumnInput{
+		Name:     "description",
+		Type:     "text",
+		Nullable: true,
+	})
+	columns = append(columns, ColumnInput{
+		Name:         "created_at",
+		Type:         "timestamp",
+		Nullable:     false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+	})
+
+	indexes := []IndexInput{}
+
+	primaryIndexColumn := ColumnInput{
+		Name:          "id",
+		Type:          "bigint",
+		Nullable:      false,
+		AutoIncrement: true,
+	}
+
+	primaryIndex := IndexInput{
+		Columns: []ColumnInput{
+			primaryIndexColumn,
+		},
+		Type: PRIMARY,
+	}
+
+	indexes = append(indexes, primaryIndex)
+
+	table := TableInput{
+		Database: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Name:     "engine_row_level_security",
 		Columns:  columns,
 		Indexes:  indexes,
 	}

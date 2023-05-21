@@ -64,5 +64,15 @@ func main() {
 	app.Use(GraphQLRoute, AuthMainMiddleware(app))
 	app.Post(GraphQLRoute, GraphqlHandler(app, db))
 
+	// RLS DATABASE ROUTES
+	app.Use(RLS_DB, AuthMainMiddleware(app))
+	app.Put(RLS_DB, EnableRlsForDatabase(app, db))
+	app.Delete(RLS_DB, DisableRlsForDatabase(app, db))
+
+	// RLS TABLE ROUTES
+	app.Use(RLS_TABLE, AuthMainMiddleware(app))
+	app.Put(RLS_TABLE, EnableRlsForTable(app, db))
+	app.Delete(RLS_TABLE, DisableRlsForTable(app, db))
+
 	app.Listen()
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
@@ -42,6 +43,7 @@ type Model struct {
 	RelationsInfoMap RelationInfoMap `json:"relationInfoMap"`
 	Indexes          []Index         `json:"indexes"`
 	ColumnsMap       ColumnsMap      `json:"columnsMap"`
+	ModelRLS         []RLS           `json:"rls"`
 	RLS              RLSMap
 }
 
@@ -65,6 +67,14 @@ func NewModel(database string, table string) *Model {
 	}
 }
 
+func (model *Model) LoadModelRLS(rls []RLS) {
+	for _, policy := range rls {
+		if policy.Database == model.Database && policy.Table == model.Table {
+			model.ModelRLS = append(model.ModelRLS, policy)
+		}
+	}
+}
+
 func (model *Model) GetModelRelationInfo(alias string) (*DatabaseRelationSchema, error) {
 	x := ClearAliasForAggregate(alias)
 	if info, ok := model.RelationsInfoMap[x]; ok {
@@ -82,7 +92,7 @@ func (model *Model) GetModelRelation(alias string) (*Model, error) {
 	return nil, fmt.Errorf("no such relation")
 }
 
-func (model *Model) Select(role string, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string) (string, []interface{}) {
+func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string) (string, []interface{}) {
 	query := ``
 	args := make([]interface{}, 0)
 	if !IsEligibleModelRequestBody(body) {
@@ -98,7 +108,7 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 	makeQuery := func(model *Model, bodyEntities interface{}, aliasPart string) {
 		parsedBody, err := IsMapToInterface(bodyEntities)
 		currentAlias := fmt.Sprintf("_%d_%s", depth, aliasPart)
-		modelColumnsString := model.GetModelColumnsWithAlias(role, body, currentAlias)
+		modelColumnsString := model.GetModelColumnsWithAlias("", body, currentAlias)
 
 		if _where, ok := parsedBody["_where"]; ok {
 			initialQuery := " WHERE "
@@ -157,14 +167,14 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 				if bodyRelation, err := IsMapToInterface(bodyEntities); err == nil {
 					if IsAggregation(key) {
 						depth = depth + 1
-						queryStr, queryArgs := relatedModel.SelectAggregate(role, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias, key)
+						queryStr, queryArgs := relatedModel.SelectAggregate(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias, key)
 						relationQueryAlias := fmt.Sprintf("_%d_%s", depth, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, key, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
 						args = append(args, queryArgs...)
 					} else {
 						depth = depth + 1
-						queryStr, queryArgs := relatedModel.Select(role, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias)
+						queryStr, queryArgs := relatedModel.Select(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias)
 						relationQueryAlias := fmt.Sprintf("_%d_%s", depth, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, relatedModelInfo.Alias, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
@@ -183,7 +193,7 @@ func (model *Model) Select(role string, body interface{}, depth int, idx *int, r
 	return query, args
 }
 
-func (model *Model) SelectAggregate(role string, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string, aggregation_name string) (string, []interface{}) {
+func (model *Model) SelectAggregate(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string, aggregation_name string) (string, []interface{}) {
 	query := ``
 	args := make([]interface{}, 0)
 	if !IsEligibleModelRequestBody(body) {
@@ -223,7 +233,7 @@ func (model *Model) SelectAggregate(role string, body interface{}, depth int, id
 		args = append(args, orderByArgs...)
 
 		// MAIN AGGREGATION JSON OBJECT BUILDER
-		queryString := model.BuildAggregate(role, parsedBody, currentAlias)
+		queryString := model.BuildAggregate(auth, parsedBody, currentAlias)
 
 		query += fmt.Sprintf(`SELECT %s as %s FROM ( SELECT %s * FROM %s.%s %s %s %s %s %s) %s`,
 			queryString,
@@ -1027,13 +1037,13 @@ func (model *Model) BuildGroupBy(body interface{}, alias string) (string, []inte
 
 }
 
-func (model *Model) BuildAggregate(role string, body interface{}, alias string) string {
+func (model *Model) BuildAggregate(auth jwt.MapClaims, body interface{}, alias string) string {
 	queryParts := make([]string, 0)
-	countParts := model.BuildCountAggregate(role, body)
-	maxParts := model.BuildMaxAggregate(role, body, alias)
-	minParts := model.BuildMinAggregate(role, body, alias)
-	sumParts := model.BuildSumAggregate(role, body, alias)
-	avgParts := model.BuildAVGAggregate(role, body, alias)
+	countParts := model.BuildCountAggregate("", body)
+	maxParts := model.BuildMaxAggregate("", body, alias)
+	minParts := model.BuildMinAggregate("", body, alias)
+	sumParts := model.BuildSumAggregate("", body, alias)
+	avgParts := model.BuildAVGAggregate("", body, alias)
 
 	if len(countParts) > 0 {
 		queryParts = append(queryParts, countParts)

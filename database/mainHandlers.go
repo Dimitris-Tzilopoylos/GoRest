@@ -3,13 +3,40 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+
+	"github.com/golang-jwt/jwt/v5"
+	_ "github.com/lib/pq"
 )
 
-func (e *Engine) SelectExec(role string, db *sql.DB, database string, body interface{}) ([]byte, error) {
+func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, body interface{}) ([]byte, error) {
 
 	ctx := context.Background()
 	databaseExists := e.DatabaseExists(database)
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conn.Close()
+	r := conn.QueryRowContext(context.Background(), "SELECT current_setting('jwt.auth.user')")
+	var row interface{}
+	r.Scan(&row)
+	fmt.Println(row, "here...")
+	claimsJson, err := json.Marshal(auth)
+	if err != nil {
+		return nil, err
+	}
+	_, err = conn.ExecContext(context.Background(), fmt.Sprintf("SET  my.jwt_user = '%s'", string(claimsJson)))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	r = conn.QueryRowContext(context.Background(), "SELECT current_setting('my.jwt_user')")
+	var x string
+	r.Scan(&x)
+	fmt.Println(x)
 
 	if !databaseExists {
 		return nil, fmt.Errorf("database %s doesn't exist", database)
@@ -36,16 +63,16 @@ func (e *Engine) SelectExec(role string, db *sql.DB, database string, body inter
 		query := ""
 		args := make([]interface{}, 0)
 		if IsAggregation(key) {
-			queryString, newArgs := (*model).SelectAggregate(role, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key), key)
+			queryString, newArgs := (*model).SelectAggregate(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key), key)
 			query = queryString
 			args = append(args, newArgs...)
 		} else {
-			queryString, newArgs := (*model).Select(role, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key))
+			queryString, newArgs := (*model).Select(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key))
 			query = queryString
 			args = append(args, newArgs...)
 		}
 
-		scanner := SelectQueryContext(ctx, db, query, args...)
+		scanner := SelectQueryContext(context.Background(), conn, query, args...)
 		var r []byte
 		cb := func(rows *sql.Rows) error {
 			err := rows.Scan(&r)

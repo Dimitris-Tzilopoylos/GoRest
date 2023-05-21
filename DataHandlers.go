@@ -13,8 +13,8 @@ func SelectHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		body := engine.GetBody(req)
 		params := engine.GetParams(req)
 		database := params["database"]
-
-		x, err := app.Engine.SelectExec("", db, database, body)
+		auth := engine.GetAuth(req)
+		x, err := app.Engine.SelectExec(auth, db, database, body)
 		if err != nil {
 			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return

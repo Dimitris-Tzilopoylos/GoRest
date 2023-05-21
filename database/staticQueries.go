@@ -49,7 +49,9 @@ const GET_ENGINE_RELATIONS = `SELECT relations.id,relations.alias,relations.db,r
 const GET_GLOBAL_AUTH_CONFIG = `SELECT id,created_at,db,tbl,auth_config FROM root_engine.engine_auth_provider ORDER BY created_at ASC;`
 const ENGINE_GET_WEBHOOKS = `SELECT id,endpoint,enabled,db,db_table,operation,rest,graphql,created_at,type,forward_auth_headers FROM root_engine.engine_webhooks;`
 const ENGINE_GET_DATA_TRIGGERS = `SELECT id,created_at,db,tbl,trigger_config FROM root_engine.engine_data_triggers;`
-
+const ENGINE_GET_RLS = `SELECT id,policy_name,policy_for,policy_type,db,tbl,enabled,created_at,sql_input,description FROM root_engine.engine_row_level_security;`
+const CREATE_ENGINE_RLS = `INSERT INTO root_engine.engine_row_level_security(policy_name,policy_for,policy_type,db,tbl,enabled,sql_input,description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8);`
+const DELETE_ENGINE_RLS = `DELETE FROM root_engine.engine_row_level_security WHERE policy_name = $1`
 const GET_UNIQUE_INDXES = `SELECT
     n.nspname AS schema_name,
     t.relname AS table_name,
@@ -73,3 +75,37 @@ GROUP BY
     t.relname,
     i.relname,
     idx.indisunique;`
+
+const ENABLE_RLS_FOR_DATABASE_POSTGRES = `ALTER DATABASE postgres row_security = on;`
+const DISABLE_RLS_FOR_DATABASE_POSTGRES = `ALTER DATABASE postgres SET row_security = off;`
+
+const ENABLE_RLS_FOR_TABLE = `ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;`
+const FORCE_RLS_FOR_TABLE = `ALTER TABLE  %s.%s FORCE ROW LEVEL SECURITY;`
+const DISABLE_RLS_FOR_TABLE = `ALTER TABLE %s.%s DISABLE ROW LEVEL SECURITY;`
+const DROP_TABLE_POLICY = `DROP policy %s ON %s.%s`
+
+const GET_POLICIES = `SELECT pol.polname AS policy_name, tbl.relname AS table_name, nsp.nspname AS schema_name
+FROM pg_policy pol
+JOIN pg_class tbl ON pol.polrelid = tbl.oid
+JOIN pg_namespace nsp ON tbl.relnamespace = nsp.oid;`
+
+const GET_TABLE_POLICIES = `SELECT pol.polname AS policy_name, tbl.relname AS table_name, nsp.nspname AS schema_name
+FROM pg_policy pol
+JOIN pg_class tbl ON pol.polrelid = tbl.oid
+JOIN pg_namespace nsp ON tbl.relnamespace = nsp.oid
+WHERE relname= $1 AND nspname = $2;`
+
+const GET_DATABASE_POLICIES = `SELECT pol.polname AS policy_name, tbl.relname AS table_name, nsp.nspname AS schema_name
+FROM pg_policy pol
+JOIN pg_class tbl ON pol.polrelid = tbl.oid
+JOIN pg_namespace nsp ON tbl.relnamespace = nsp.oid
+WHERE nspname = $1;`
+
+const GET_ALL_RLS_TABLES = `SELECT n.nspname AS database, c.relname AS table
+FROM pg_class c
+JOIN pg_namespace n ON c.relnamespace = n.oid
+WHERE c.relkind = 'r' 
+AND c.relrowsecurity = true;`
+
+const CREATE_QUERY_POLICY = `CREATE POLICY %s ON %s.%s AS %s  FOR %s TO PUBLIC USING (%s);`
+const CREATE_STATEMENT_POLICY = `CREATE POLICY ON %s.%s %s AS %s  FOR %s TO PUBLIC WITH CHECK (%s);`

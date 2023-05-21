@@ -33,8 +33,14 @@ var ColumnsRoute string = "/engine/databases/<str:database>/tables/<str:table>/c
 // INDEXES ROUTES
 var IndexesRoute string = "/engine/databases/<str:database>/tables/<str:table>/indexes"
 
-// CUSTOM REST HANDLERS
+// CUSTOM REST HANDLERS ROUTES
 var CustomRestHandlersRoute string = "/engine/rest-handlers"
 
+// GRAPHQL ROUTES
 var GraphQLRoute string = environment.GetEnvValueToStringWithDefault("GRAPHQL_ENDPOINT", "/graphql")
 var GraphiQLRoute string = environment.GetEnvValueToStringWithDefault("GRAPHIQL_ENDPOINT", GraphQLRoute)
+
+
+// RLS ROUTES 
+var RLS_DB string "/engine/rls/database"
+var RLS_TABLE string "/engine/rls/table"

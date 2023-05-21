@@ -162,7 +162,7 @@ func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (stri
 	}
 	queryPayload[payload.Table] = payload.Query
 
-	result, err := e.SelectExec(role, db, payload.Database, queryPayload)
+	result, err := e.SelectExec(nil, db, payload.Database, queryPayload)
 
 	if err != nil {
 		return "", err
@@ -174,12 +174,12 @@ func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (stri
 	}
 
 	parsedUsers, err := IsMapToInterface(users)
-
+	fmt.Println(parsedUsers)
 	if err != nil {
 		return "", fmt.Errorf("Unauthorized")
 	}
 
-	usersMapResult, ok := parsedUsers["users"]
+	usersMapResult, ok := parsedUsers[payload.Table]
 	if !ok {
 		return "", fmt.Errorf("Unauthorized")
 	}

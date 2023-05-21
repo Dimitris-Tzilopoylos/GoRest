@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func SelectQueryContext(ctx context.Context, db *sql.DB, query string, args ...any) func(func(rows *sql.Rows) error) error {
+func SelectQueryContext(ctx context.Context, db *sql.Conn, query string, args ...any) func(func(rows *sql.Rows) error) error {
 	rows, err := db.QueryContext(ctx, query, args...)
 	return func(callback func(rows *sql.Rows) error) error {
 		if err != nil {

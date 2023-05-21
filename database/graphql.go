@@ -787,7 +787,7 @@ func (e *Engine) GraphqlQueryResolve(inputData any, auth jwt.MapClaims, db *sql.
 
 	results := []byte{}
 	for dbName, payload := range configByDatabase {
-		result, err := e.SelectExec("", db, dbName, payload)
+		result, err := e.SelectExec(auth, db, dbName, payload)
 		if err != nil {
 			return nil, err
 		}
