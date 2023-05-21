@@ -77,3 +77,39 @@ func DisableRlsForTable(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("Row level security for table %s of database %s: Disabled", input.Table, input.Database)})
 	}
 }
+
+func CreateRLSPolicy(app *engine.Router, db *sql.DB) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		input, err := engine.GetBodyIntoStruct(req, database.RLSInput{})
+		if err != nil {
+			app.ErrorResponse(res, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		err = app.Engine.CreateEngineRLS(db, input)
+		if err != nil {
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		app.Json(res, http.StatusCreated, map[string]string{"message": fmt.Sprintf("Policy %s for table %s of database %s: Created", input.PolicyName, input.Table, input.Database)})
+	}
+}
+
+func DeletePolicy(app *engine.Router, db *sql.DB) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		input, err := engine.GetBodyIntoStruct(req, database.RLSInput{})
+		if err != nil {
+			app.ErrorResponse(res, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		err = app.Engine.DropEngineRLS(db, input)
+		if err != nil {
+			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("Policy %s for table %s of database %s: Deleted", input.PolicyName, input.Table, input.Database)})
+	}
+}

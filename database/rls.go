@@ -78,7 +78,7 @@ func (e *Engine) ValidatePolicyName(input RLSInput, unique bool) error {
 
 func ValidateRLSSQL(input RLSInput) error {
 	sql := strings.Trim(input.SQL, " ")
-	if len(input.SQL) == 0 {
+	if len(sql) == 0 {
 		return fmt.Errorf("please provide condition for policy")
 	}
 

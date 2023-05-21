@@ -76,7 +76,7 @@ GROUP BY
     i.relname,
     idx.indisunique;`
 
-const ENABLE_RLS_FOR_DATABASE_POSTGRES = `ALTER DATABASE postgres row_security = on;`
+const ENABLE_RLS_FOR_DATABASE_POSTGRES = `ALTER DATABASE postgres SET row_security = on;`
 const DISABLE_RLS_FOR_DATABASE_POSTGRES = `ALTER DATABASE postgres SET row_security = off;`
 
 const ENABLE_RLS_FOR_TABLE = `ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;`

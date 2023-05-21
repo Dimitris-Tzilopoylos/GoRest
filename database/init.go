@@ -28,6 +28,10 @@ type Engine struct {
 }
 
 func Init(db *sql.DB) *Engine {
+	err := EnableRLS(db)
+	if err != nil {
+		panic(err)
+	}
 	InitializeEngineDatabase(db)
 	engine := &Engine{
 		GlobalAuthEntities: make([]GlobalAuthEntity, 0),
@@ -70,6 +74,10 @@ func Init(db *sql.DB) *Engine {
 func (engine *Engine) Reload(db *sql.DB) {
 	mutex.Lock()
 	defer mutex.Unlock()
+	err := EnableRLS(db)
+	if err != nil {
+		panic(err)
+	}
 	engine.LoadRLS(db)
 	databases, _ := GetDatabases(db)
 	relations, _ := GetEngineRelations(db)
@@ -765,7 +773,6 @@ func CreateEngineCustomEndopointsTable(db *sql.DB) {
 }
 
 func CreateEngineRowLevelSecurityTable(db *sql.DB) {
-	DropTable(db, TableInput{Database: "root_engine", Name: "engine_row_level_security"})
 	columns := []ColumnInput{}
 	columns = append(columns, ColumnInput{
 		Name:          "id",

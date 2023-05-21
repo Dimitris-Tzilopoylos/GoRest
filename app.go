@@ -74,5 +74,10 @@ func main() {
 	app.Put(RLS_TABLE, EnableRlsForTable(app, db))
 	app.Delete(RLS_TABLE, DisableRlsForTable(app, db))
 
+	// RLS POLICIES
+	app.Use(RLS_TABLE_POLICY, AuthMainMiddleware(app))
+	app.Post(RLS_TABLE_POLICY, CreateRLSPolicy(app, db))
+	app.Delete(RLS_TABLE_POLICY, DeletePolicy(app, db))
+
 	app.Listen()
 }

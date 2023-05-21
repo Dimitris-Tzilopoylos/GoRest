@@ -40,7 +40,7 @@ var CustomRestHandlersRoute string = "/engine/rest-handlers"
 var GraphQLRoute string = environment.GetEnvValueToStringWithDefault("GRAPHQL_ENDPOINT", "/graphql")
 var GraphiQLRoute string = environment.GetEnvValueToStringWithDefault("GRAPHIQL_ENDPOINT", GraphQLRoute)
 
-
-// RLS ROUTES 
-var RLS_DB string "/engine/rls/database"
-var RLS_TABLE string "/engine/rls/table"
+// RLS ROUTES
+var RLS_DB string = "/engine/rls/database"
+var RLS_TABLE string = "/engine/rls/table"
+var RLS_TABLE_POLICY string = "/engine/rls/policy"
