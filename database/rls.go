@@ -129,7 +129,6 @@ func (e *Engine) LoadRLS(db *sql.DB) ([]RLS, error) {
 		return err
 	}
 	err = scanner(cb)
-
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +280,7 @@ func (e *Engine) CreateEngineRLS(db *sql.DB, input RLSInput) error {
 		return err
 	}
 
-	engineRlsQuery := fmt.Sprintf(CREATE_ENGINE_RLS,
+	_, err = db.Exec(CREATE_ENGINE_RLS,
 		input.PolicyName,
 		input.PolicyFor,
 		input.PolicyType,
@@ -291,8 +290,6 @@ func (e *Engine) CreateEngineRLS(db *sql.DB, input RLSInput) error {
 		input.SQL,
 		input.Description,
 	)
-
-	_, err = db.Exec(engineRlsQuery)
 
 	if err != nil {
 		return err
@@ -307,7 +304,9 @@ func (e *Engine) CreateEngineRLS(db *sql.DB, input RLSInput) error {
 		Database: input.Database,
 	}
 	err = e.EnableRLSForDatabase(db, enableDataBaseRLSInput)
-
+	if err != nil {
+		return err
+	}
 	enableDatabaseTableInput := EnableRlsForDatabaseTableInput{
 		Database: input.Database,
 		Table:    input.Table,

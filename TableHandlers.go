@@ -20,6 +20,7 @@ func GetTable(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		db := params["database"]
 		tbl := params["table"]
 		tablesMap, ok := app.Engine.DatabaseToTableToModelMap[db]
+
 		if !ok {
 			app.NotFound(res, req)
 			return
@@ -30,7 +31,11 @@ func GetTable(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		app.Json(res, http.StatusOK, map[string]any{"table": table})
+		response := *table
+
+		response.Relations = nil
+
+		app.Json(res, http.StatusOK, map[string]any{"table": response})
 	}
 }
 

@@ -38,6 +38,8 @@ func DisableRlsForDatabase(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		app.Engine.Reload(db)
+
 		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("Row level security for database %s: Disabled", input.Database)})
 	}
 }
@@ -55,6 +57,8 @@ func EnableRlsForTable(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		app.Engine.Reload(db)
 
 		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("Row level security for table %s of database %s: Enabled", input.Table, input.Database)})
 	}
@@ -74,6 +78,8 @@ func DisableRlsForTable(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		app.Engine.Reload(db)
+
 		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("Row level security for table %s of database %s: Disabled", input.Table, input.Database)})
 	}
 }
@@ -92,6 +98,8 @@ func CreateRLSPolicy(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		app.Engine.Reload(db)
+
 		app.Json(res, http.StatusCreated, map[string]string{"message": fmt.Sprintf("Policy %s for table %s of database %s: Created", input.PolicyName, input.Table, input.Database)})
 	}
 }
@@ -109,6 +117,8 @@ func DeletePolicy(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		app.Engine.Reload(db)
 
 		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("Policy %s for table %s of database %s: Deleted", input.PolicyName, input.Table, input.Database)})
 	}

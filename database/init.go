@@ -3,6 +3,7 @@ package database
 import (
 	"application/environment"
 	"database/sql"
+	"fmt"
 	"log"
 	"sync"
 )
@@ -25,6 +26,23 @@ type Engine struct {
 	DataTriggers              map[string]map[string]DataTrigger
 	RestHandlers              []CustomRestHandlerInput
 	RestHandlersMap           map[string]map[string]CustomRestHandlerInput
+	SuperUser                 string
+}
+
+func (e *Engine) CreateSuperUser(db *sql.DB) error {
+	superUser := e.SuperUser
+	superUserPassword := environment.GetEnvValueToStringWithDefault("SUPER_USER_PASSWORD", "12345678")
+	staticQuery := fmt.Sprintf(CREATE_SUPER_USER, superUser, superUserPassword)
+	_, err := db.Exec(staticQuery)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("ALTER USER postgres WITH NOSUPERUSER")
+	if err != nil {
+		panic(err)
+	}
+	return err
 }
 
 func Init(db *sql.DB) *Engine {
@@ -38,7 +56,9 @@ func Init(db *sql.DB) *Engine {
 		InternalSchemaName: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
 		Version:            environment.GetEnvValue("VERSION"),
 		EventEmitter:       NewEventEmitter(),
+		SuperUser:          environment.GetEnvValueToStringWithDefault("SUPER_USER", "engine_administrator"),
 	}
+	engine.CreateSuperUser(db)
 	engine.LoadRLS(db)
 	relations, _ := GetEngineRelations(db)
 	databases, _ := GetDatabases(db)
