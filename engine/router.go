@@ -76,6 +76,7 @@ type Router struct {
 	EnableHttpLogging bool
 	EnableSQLLogging  bool
 	DB                *sql.DB
+	Rooms             map[*Client]bool
 }
 
 func (r *Router) Status(res http.ResponseWriter, statusCode int) *Router {
@@ -143,6 +144,7 @@ func (r *Router) Initialize() {
 	if err != nil {
 		panic(err)
 	}
+	r.Rooms = map[*Client]bool{}
 	r.EnableHttpLogging = environment.GetEnvValue("HTTP_LOGGER") == "ON"
 	r.EnableSQLLogging = environment.GetEnvValue("SQL_LOGGER") == "ON"
 	r.Logger = logger
@@ -246,6 +248,14 @@ func (r *Router) deriveMiddlewarePreHandlersForRoute(url string) []func(res http
 		preHandlers = append(preHandlers, config.handler)
 	}
 	return preHandlers
+}
+
+func (r *Router) Any(url string, handler http.HandlerFunc) {
+	r.Get(url, handler)
+	r.Post(url, handler)
+	r.Put(url, handler)
+	r.Patch(url, handler)
+	r.Delete(url, handler)
 }
 
 func (r *Router) Get(url string, handler http.HandlerFunc) {
@@ -583,6 +593,7 @@ func (r *Router) populateUrlKeys() {
 }
 
 func (r *Router) Listen() {
+
 	port := environment.GetEnvValue("PORT")
 	r.populateUrlKeys()
 	server := &http.Server{
@@ -591,6 +602,7 @@ func (r *Router) Listen() {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
+
 	version := environment.GetEnvValue("VERSION")
 	fmt.Printf("GOJila Engine Version: %s\n", version)
 	fmt.Printf("Server started at: http://localhost%s\n", port)

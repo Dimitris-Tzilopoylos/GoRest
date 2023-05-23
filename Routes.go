@@ -44,3 +44,6 @@ var GraphiQLRoute string = environment.GetEnvValueToStringWithDefault("GRAPHIQL_
 var RLS_DB string = "/engine/rls/database"
 var RLS_TABLE string = "/engine/rls/table"
 var RLS_TABLE_POLICY string = "/engine/rls/policy"
+
+//WS ROUTES
+var WS string = "/ws"

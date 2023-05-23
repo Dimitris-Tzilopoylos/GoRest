@@ -79,5 +79,12 @@ func main() {
 	app.Post(RLS_TABLE_POLICY, CreateRLSPolicy(app, db))
 	app.Delete(RLS_TABLE_POLICY, DeletePolicy(app, db))
 
+	app.Use(WS, AuthWSMiddleware(app))
+	app.Any(WS, app.WSHandler)
+
+	// DATABASE TRIGGERS
+	subscription := RegisterDatabaseTriggers(app)
+	defer subscription()
+
 	app.Listen()
 }

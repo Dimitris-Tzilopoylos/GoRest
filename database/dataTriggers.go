@@ -21,12 +21,12 @@ type DataTriggerPayload struct {
 }
 
 type DataTriggerInput struct {
-	Database  string
-	Table     string
-	Type      string
-	Operation string
+	Database  string `json:"database"`
+	Table     string `json:"table"`
+	Type      string `json:"type"`
+	Operation string `json:"operation"`
 	Auth      string
-	Payload   any
+	Payload   any `json:"payload"`
 }
 
 type TriggerConfig struct {
@@ -127,6 +127,20 @@ func (engine *Engine) GetDatabaseTableDataTrigger(database string, table string)
 	return &dataTirgger, nil
 }
 
+func (engine *Engine) HandleEvent(input DataTriggerInput) {
+	var EventProtocolType string = environment.GetEnvValue("DATA_TRIGGER_PROTOCOL")
+
+	switch EventProtocolType {
+	case "WEBSOCKET":
+		engine.WebSocketEvent(input)
+	case "HTTP":
+		engine.PostEvent(input)
+	default:
+		return
+
+	}
+}
+
 func (engine *Engine) PostEvent(input DataTriggerInput) {
 
 	payload := DataTriggerPayload{
@@ -144,7 +158,6 @@ func (engine *Engine) PostEvent(input DataTriggerInput) {
 	var WEBSOCKET_SERVICE string = environment.GetEnvValue("WEBSOCKET_SERVICE")
 
 	url := fmt.Sprintf("%s/data-trigger", WEBSOCKET_SERVICE)
-	fmt.Println(url)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		fmt.Println(err.Error())
@@ -164,8 +177,13 @@ func (engine *Engine) PostEvent(input DataTriggerInput) {
 	defer res.Body.Close()
 }
 
+func (engine *Engine) WebSocketEvent(input DataTriggerInput) {
+	engine.EventEmitter.Emit(input.Operation, input)
+}
+
 func (engine *Engine) ExecuteDataTrigger(dataTriggerInput DataTriggerInput) {
 	trigger, err := engine.GetDatabaseTableDataTrigger(dataTriggerInput.Database, dataTriggerInput.Table)
+
 	if err != nil {
 		return
 	}
@@ -187,22 +205,22 @@ func (engine *Engine) ExecuteDataTrigger(dataTriggerInput DataTriggerInput) {
 		if !trigger.TriggerConfig.InsertEnabled {
 			return
 		}
-		engine.PostEvent(dataTriggerInput)
+		engine.HandleEvent(dataTriggerInput)
 	case UPDATE_OPERATION:
 		if !trigger.TriggerConfig.UpdateEnabled {
 			return
 		}
-		engine.PostEvent(dataTriggerInput)
+		engine.HandleEvent(dataTriggerInput)
 	case DELETE_OPERATION:
 		if !trigger.TriggerConfig.DeleteEnabled {
 			return
 		}
-		engine.PostEvent(dataTriggerInput)
+		engine.HandleEvent(dataTriggerInput)
 	case ERROR_OPERATION:
 		if !trigger.TriggerConfig.ErrorEnabled {
 			return
 		}
-		engine.PostEvent(dataTriggerInput)
+		engine.HandleEvent(dataTriggerInput)
 	}
 
 }

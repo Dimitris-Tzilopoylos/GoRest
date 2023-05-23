@@ -138,6 +138,29 @@ func (e *Engine) AuthenticateForDatabase(req *http.Request, database string) (*h
 	return nil, fmt.Errorf("unauthorized")
 }
 
+func (e *Engine) AuthenticateForDatabaseDataTriggers(req *http.Request) (*http.Request, error) {
+	tokenString := req.URL.Query().Get("jwt")
+
+	if len(tokenString) < 1 {
+		return nil, fmt.Errorf("no token was provided")
+	}
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return GetSecret(), nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		req = req.WithContext(context.WithValue(req.Context(), "auth", claims))
+		return req, nil
+	}
+	return nil, fmt.Errorf("unauthorized")
+}
 func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (string, error) {
 
 	identityValue, ok := payload.Body[payload.IdentityField]

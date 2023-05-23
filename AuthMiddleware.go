@@ -40,3 +40,20 @@ func AuthDBMiddleware(app *engine.Router) func(res http.ResponseWriter, req *htt
 		next(enhancedReq)
 	}
 }
+
+func AuthWSMiddleware(app *engine.Router) func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
+	return func(res http.ResponseWriter, req *http.Request, next func(req *http.Request)) {
+		disableAuth := environment.GetEnvValue("DISABLE_AUTH") == "ON"
+		if disableAuth {
+			next(req)
+			return
+		}
+
+		enhancedReq, err := app.Engine.AuthenticateForDatabaseDataTriggers(req)
+		if err != nil {
+			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			return
+		}
+		next(enhancedReq)
+	}
+}
