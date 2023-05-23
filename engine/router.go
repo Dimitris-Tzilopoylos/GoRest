@@ -90,6 +90,9 @@ func (r *Router) Json(res http.ResponseWriter, statusCode int, value interface{}
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("Engine-Status-Code", fmt.Sprintf("%d", statusCode))
 	res.WriteHeader(statusCode)
+	if statusCode == 204 {
+		return 1
+	}
 	switch val := value.(type) {
 	case []byte:
 		res.Write(val)
@@ -531,6 +534,7 @@ func (r *Router) withRequestId(req *http.Request) *http.Request {
 
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 	(*w).Header().Set("Access-Control-Allow-Headers", "*")
 }
 

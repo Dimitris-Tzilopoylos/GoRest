@@ -20,14 +20,16 @@ func GetDatabaseTables(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		params := engine.GetParams(req)
 		db := params["database"]
 		tablesMap, ok := app.Engine.DatabaseToTableToModelMap[db]
-		if !ok {
-			app.NotFound(res, req)
-			return
-		}
+
 		tables := make([]database.Model, 0)
-		for _, value := range tablesMap {
-			tables = append(tables, *value)
+		if ok {
+			for _, value := range tablesMap {
+				table := *value
+				table.Relations = nil
+				tables = append(tables, table)
+			}
 		}
+
 		app.Json(res, http.StatusOK, map[string]any{"database": db, "tables": tables})
 	}
 }

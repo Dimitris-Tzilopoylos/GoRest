@@ -159,7 +159,6 @@ func CreatePrimaryIndex(db *sql.DB, table TableInput, index IndexInput) error {
 
 	if len(sequenceQuery) > 0 && len(alterColumnAutoIncrementQuery) > 0 {
 		_, err = tx.Exec(sequenceQuery)
-		fmt.Println(sequenceQuery)
 		if err != nil {
 			errRB := tx.Rollback()
 			if errRB != nil {
@@ -169,7 +168,6 @@ func CreatePrimaryIndex(db *sql.DB, table TableInput, index IndexInput) error {
 		}
 
 		_, err = tx.Exec(alterColumnAutoIncrementQuery)
-		fmt.Println(alterColumnAutoIncrementQuery)
 		if err != nil {
 			errRB := tx.Rollback()
 			if errRB != nil {

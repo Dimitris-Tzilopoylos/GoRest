@@ -53,11 +53,26 @@ func GetSecret() []byte {
 
 func (e *Engine) Authenticate(req *http.Request) (*http.Request, error) {
 	auth := req.Header.Get("Authorization")
+	tokenPartsLength := 2
+	if auth == "" {
+		auth = req.URL.Query().Get("token")
+		tokenPartsLength = 1
+		if auth == "" {
+			auth = req.Header.Get("x-engine-api-key")
+		}
+
+	}
+
 	if auth == "" {
 		return nil, fmt.Errorf("no token was provided")
 	}
 
-	tokenString := strings.Split(auth, " ")[1]
+	tokenParts := strings.Split(auth, " ")
+
+	if len(tokenParts) != tokenPartsLength {
+		return nil, fmt.Errorf("malformed token")
+	}
+	tokenString := tokenParts[tokenPartsLength-1]
 
 	if len(tokenString) < 1 {
 		return nil, fmt.Errorf("no token was provided")

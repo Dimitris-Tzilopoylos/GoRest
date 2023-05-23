@@ -120,7 +120,7 @@ func GetColumnFromInputToSqlString(column ColumnInput) (string, error) {
 	}
 
 	if column.DefaultValue != nil {
-		str += fmt.Sprintf(` DEFAULT %v `, column.DefaultValue)
+		str += fmt.Sprintf(` DEFAULT '%v'::%s `, column.DefaultValue, column.Type)
 
 	}
 	return str, nil

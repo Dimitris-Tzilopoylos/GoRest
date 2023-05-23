@@ -92,11 +92,11 @@ func (model *Model) GetModelRelation(alias string) (*Model, error) {
 	return nil, fmt.Errorf("no such relation")
 }
 
-func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string) (string, []interface{}) {
+func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string) (string, []interface{}, error) {
 	query := ``
 	args := make([]interface{}, 0)
 	if !IsEligibleModelRequestBody(body) {
-		return query, args
+		return query, args, fmt.Errorf("not eligible select input")
 	}
 	builder := GetRelationalCoalesceSymbols(model, relationInfo, depth, parentAlias)
 	query = fmt.Sprintf(`SELECT coalesce(json_agg(_%d_%s)%s,'%s') as %s FROM (`,
@@ -105,7 +105,7 @@ func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx 
 		builder.RelationExtractSymbol,
 		builder.RelationCoalesceSymbol,
 		builder.RelationAlias)
-	makeQuery := func(model *Model, bodyEntities interface{}, aliasPart string) {
+	makeQuery := func(model *Model, bodyEntities interface{}, aliasPart string) error {
 		parsedBody, err := IsMapToInterface(bodyEntities)
 		currentAlias := fmt.Sprintf("_%d_%s", depth, aliasPart)
 		modelColumnsString := model.GetModelColumnsWithAlias("", body, currentAlias)
@@ -167,14 +167,20 @@ func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx 
 				if bodyRelation, err := IsMapToInterface(bodyEntities); err == nil {
 					if IsAggregation(key) {
 						depth = depth + 1
-						queryStr, queryArgs := relatedModel.SelectAggregate(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias, key)
+						queryStr, queryArgs, err := relatedModel.SelectAggregate(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias, key)
+						if err != nil {
+							return err
+						}
 						relationQueryAlias := fmt.Sprintf("_%d_%s", depth, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, key, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
 						args = append(args, queryArgs...)
 					} else {
 						depth = depth + 1
-						queryStr, queryArgs := relatedModel.Select(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias)
+						queryStr, queryArgs, err := relatedModel.Select(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias)
+						if err != nil {
+							return err
+						}
 						relationQueryAlias := fmt.Sprintf("_%d_%s", depth, relatedModel.Table)
 						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, relatedModelInfo.Alias, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
@@ -184,26 +190,30 @@ func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx 
 				}
 			}
 		}
+		return nil
 	}
 
-	makeQuery(model, body, model.Table)
+	err := makeQuery(model, body, model.Table)
+	if err != nil {
+		return query, args, err
+	}
 	query += fmt.Sprintf(") _%d_%s", depth, model.Table)
 	query = fmt.Sprintf(query, "")
 
-	return query, args
+	return query, args, err
 }
 
-func (model *Model) SelectAggregate(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string, aggregation_name string) (string, []interface{}) {
+func (model *Model) SelectAggregate(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string, aggregation_name string) (string, []interface{}, error) {
 	query := ``
 	args := make([]interface{}, 0)
 	if !IsEligibleModelRequestBody(body) {
-		return query, args
+		return query, args, fmt.Errorf("not eligible aggregate input")
 	}
 	builder := GetRelationalCoalesceSymbols(model, relationInfo, depth, parentAlias)
-	makeQuery := func(model *Model, bodyEntities interface{}, aliasPart string) {
+	makeQuery := func(model *Model, bodyEntities interface{}, aliasPart string) error {
 		parsedBody, err := IsMapToInterface(bodyEntities)
 		if err != nil {
-			return
+			return err
 		}
 		currentAlias := fmt.Sprintf("_%d_%s", depth, aliasPart)
 		if _where, ok := parsedBody["_where"]; ok {
@@ -233,8 +243,10 @@ func (model *Model) SelectAggregate(auth jwt.MapClaims, body interface{}, depth 
 		args = append(args, orderByArgs...)
 
 		// MAIN AGGREGATION JSON OBJECT BUILDER
-		queryString := model.BuildAggregate(auth, parsedBody, currentAlias)
-
+		queryString, err := model.BuildAggregate(auth, parsedBody, currentAlias)
+		if err != nil {
+			return err
+		}
 		query += fmt.Sprintf(`SELECT %s as %s FROM ( SELECT %s * FROM %s.%s %s %s %s %s %s) %s`,
 			queryString,
 			aggregation_name,
@@ -247,10 +259,11 @@ func (model *Model) SelectAggregate(auth jwt.MapClaims, body interface{}, depth 
 			orderByQuery,
 			paginationQuery,
 			currentAlias)
+		return nil
 	}
 
-	makeQuery(model, body, model.Table)
-	return query, args
+	err := makeQuery(model, body, model.Table)
+	return query, args, err
 }
 
 func (model *Model) Insert(role string, ctx context.Context, tx *sql.Tx, body interface{}, onConflict interface{}) (interface{}, error) {
@@ -1037,7 +1050,7 @@ func (model *Model) BuildGroupBy(body interface{}, alias string) (string, []inte
 
 }
 
-func (model *Model) BuildAggregate(auth jwt.MapClaims, body interface{}, alias string) string {
+func (model *Model) BuildAggregate(auth jwt.MapClaims, body interface{}, alias string) (string, error) {
 	queryParts := make([]string, 0)
 	countParts := model.BuildCountAggregate("", body)
 	maxParts := model.BuildMaxAggregate("", body, alias)
@@ -1066,10 +1079,10 @@ func (model *Model) BuildAggregate(auth jwt.MapClaims, body interface{}, alias s
 	}
 
 	if len(queryParts) > 0 {
-		return fmt.Sprintf("json_build_object(%s)", strings.Join(queryParts, ","))
+		return fmt.Sprintf("json_build_object(%s)", strings.Join(queryParts, ",")), nil
 	}
 
-	return ""
+	return "", fmt.Errorf("no aggregation params were provided")
 }
 
 func (model *Model) BuildAggregateForHaving(role string, body interface{}, alias string) string {

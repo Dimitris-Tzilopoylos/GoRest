@@ -756,7 +756,6 @@ func (e *Engine) GraphqlQueryResolve(inputData any, auth jwt.MapClaims, db *sql.
 	parsedSelectBody, err := IsOrderedMap(inputData)
 
 	if err != nil {
-
 		return nil, err
 	}
 
@@ -923,6 +922,7 @@ func astToMap(node ast.Node, variables map[string]interface{}, isAggregate bool)
 				// Handle other types of selections if needed
 			}
 		}
+
 		return result
 	case *ast.Field:
 		result := make(map[string]interface{})
@@ -942,12 +942,14 @@ func astToMap(node ast.Node, variables map[string]interface{}, isAggregate bool)
 		if node.SelectionSet != nil {
 			selectionSet := astToMap(node.SelectionSet, variables, isAggregation)
 			parsedSelectionSet, err := IsMapToInterface(selectionSet)
+
 			if err != nil {
 				return result
 			}
 			selectMap := make(map[string]any)
 			for key, value := range parsedSelectionSet {
 				parsedValue, err := IsMapToInterface(value)
+
 				if err != nil {
 					if isAggregation {
 						result[fmt.Sprintf("_%s", key)] = value
@@ -989,6 +991,7 @@ func astToMap(node ast.Node, variables map[string]interface{}, isAggregate bool)
 				}
 			}
 		}
+
 		return result
 	case *ast.Variable:
 		if value, ok := variables[node.Name.Value]; ok {

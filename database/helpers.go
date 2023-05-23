@@ -33,6 +33,10 @@ func IsMapToInterface(arg interface{}) (map[string]interface{}, error) {
 	switch args := arg.(type) {
 	case map[string]interface{}:
 		return args, nil
+	case OrderedMap:
+		return args.values, nil
+	case *OrderedMap:
+		return args.values, nil
 	default:
 		return nil, fmt.Errorf("type of interface is not map[string]interface{}")
 	}

@@ -19,12 +19,7 @@ func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, bod
 	if err != nil {
 		return nil, err
 	}
-
 	defer conn.Close()
-	r := conn.QueryRowContext(context.Background(), "SELECT current_setting('jwt.auth.user')")
-	var row interface{}
-	r.Scan(&row)
-	fmt.Println(row, "here...")
 	claimsJson, err := json.Marshal(auth)
 	if err != nil {
 		return nil, err
@@ -33,10 +28,6 @@ func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, bod
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	r = conn.QueryRowContext(context.Background(), "SELECT current_setting('my.jwt_user')")
-	var x string
-	r.Scan(&x)
-	fmt.Println(x)
 
 	if !databaseExists {
 		return nil, fmt.Errorf("database %s doesn't exist", database)
@@ -63,11 +54,17 @@ func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, bod
 		query := ""
 		args := make([]interface{}, 0)
 		if IsAggregation(key) {
-			queryString, newArgs := (*model).SelectAggregate(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key), key)
+			queryString, newArgs, err := (*model).SelectAggregate(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key), key)
+			if err != nil {
+				return []byte{}, err
+			}
 			query = queryString
 			args = append(args, newArgs...)
 		} else {
-			queryString, newArgs := (*model).Select(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key))
+			queryString, newArgs, err := (*model).Select(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key))
+			if err != nil {
+				return nil, err
+			}
 			query = queryString
 			args = append(args, newArgs...)
 		}

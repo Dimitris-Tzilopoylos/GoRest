@@ -58,10 +58,14 @@ func GetGraphiqlTemplate() string {
 		type="application/javascript"
 		></script>
 		<script>
+		const urlParams = new URLSearchParams(window.location.search);
+		const token = urlParams.get('token');
+		 
 		ReactDOM.render(
 			React.createElement(GraphiQL, {
 			fetcher: GraphiQL.createFetcher({
 				url: '%s%s',
+				headers: {Authorization: "Bearer "+token}
 			}),
 			defaultEditorToolsVisibility: true,
 			}),

@@ -44,7 +44,7 @@ func DropColumn(app *engine.Router, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_, err = database.ValidateCreateColumn(app.Engine.DatabaseToTableToModelMap, tableInput)
+		_, err = database.ValidateDropColumn(app.Engine.DatabaseToTableToModelMap, tableInput)
 		if err != nil {
 			app.ErrorResponse(res, http.StatusBadRequest, err.Error())
 			return
