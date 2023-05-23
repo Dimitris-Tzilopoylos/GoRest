@@ -27,9 +27,20 @@ type Engine struct {
 	RestHandlers              []CustomRestHandlerInput
 	RestHandlersMap           map[string]map[string]CustomRestHandlerInput
 	SuperUser                 string
+	AuthDisabled              bool
+	DataTriggerProtocol       string
 }
 
 func (e *Engine) CreateSuperUser(db *sql.DB) error {
+	engineRole := EngineRole{RoleName: "admin"}
+	e.CreateEngineRole(db, engineRole)
+	engineUser := EngineUserInput{
+		Email:    "admin@admin.com",
+		Password: "12345678",
+		RoleName: "admin",
+	}
+	e.CreateEngineUser(db, engineUser)
+
 	superUser := e.SuperUser
 	superUserPassword := environment.GetEnvValueToStringWithDefault("SUPER_USER_PASSWORD", "12345678")
 	staticQuery := fmt.Sprintf(CREATE_SUPER_USER, superUser, superUserPassword)
@@ -42,6 +53,7 @@ func (e *Engine) CreateSuperUser(db *sql.DB) error {
 	if err != nil {
 		panic(err)
 	}
+
 	return err
 }
 
@@ -52,11 +64,13 @@ func Init(db *sql.DB) *Engine {
 	}
 	InitializeEngineDatabase(db)
 	engine := &Engine{
-		GlobalAuthEntities: make([]GlobalAuthEntity, 0),
-		InternalSchemaName: environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
-		Version:            environment.GetEnvValue("VERSION"),
-		EventEmitter:       NewEventEmitter(),
-		SuperUser:          environment.GetEnvValueToStringWithDefault("SUPER_USER", "engine_administrator"),
+		GlobalAuthEntities:  make([]GlobalAuthEntity, 0),
+		InternalSchemaName:  environment.GetEnvValue("INTERNAL_SCHEMA_NAME"),
+		Version:             environment.GetEnvValue("VERSION"),
+		EventEmitter:        NewEventEmitter(),
+		SuperUser:           environment.GetEnvValueToStringWithDefault("SUPER_USER", "engine_administrator"),
+		DataTriggerProtocol: environment.GetEnvValue("DATA_TRIGGER_PROTOCOL"),
+		AuthDisabled:        environment.GetEnvValue("DISABLE_AUTH") == "ON",
 	}
 	engine.CreateSuperUser(db)
 	engine.LoadRLS(db)
@@ -88,6 +102,7 @@ func Init(db *sql.DB) *Engine {
 	engine.LoadDataTriggers(db)
 	engine.LoadRestHandlers(db)
 	engine.LoadGraphql()
+
 	return engine
 }
 

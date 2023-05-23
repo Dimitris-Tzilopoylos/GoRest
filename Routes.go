@@ -16,6 +16,10 @@ var RefreshTokenRoute string = "/auth"
 var LoginRoute string = "/auth/login"
 var RegisterRoute string = "/auth/register"
 
+// ENGINE AUTH ROUTES
+var EngineLoginRoute string = "/engine/auth/login"
+var EngineRegisterRoute string = "/engine/auth/register"
+
 // RELATIONS ROUTES
 var RelationsRoutes string = "/engine/relations"
 

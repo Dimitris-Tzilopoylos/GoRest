@@ -26,6 +26,11 @@ func main() {
 	app.Post(LoginRoute, LoginHandler(app, db))
 	app.Post(RegisterRoute, RegisterHandler(app, db))
 
+	// ENGINE AUTH ROUTES
+	app.Post(EngineLoginRoute, EngineLoginHandler(app, db))
+	app.Use(EngineRegisterRoute, AuthEngineMiddleware(app))
+	app.Post(EngineRegisterRoute, EngineRegisterHandler(app, db))
+
 	// RELATIONS ROUTES
 	app.Use(RelationsRoutes, AuthMainMiddleware(app))
 	app.Get(RelationsRoutes, GetRelations(app, db))

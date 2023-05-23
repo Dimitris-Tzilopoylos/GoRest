@@ -128,9 +128,8 @@ func (engine *Engine) GetDatabaseTableDataTrigger(database string, table string)
 }
 
 func (engine *Engine) HandleEvent(input DataTriggerInput) {
-	var EventProtocolType string = environment.GetEnvValue("DATA_TRIGGER_PROTOCOL")
 
-	switch EventProtocolType {
+	switch engine.DataTriggerProtocol {
 	case "WEBSOCKET":
 		engine.WebSocketEvent(input)
 	case "HTTP":

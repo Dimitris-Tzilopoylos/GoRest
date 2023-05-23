@@ -15,7 +15,7 @@ func NormalizeEventData(eventData ...any) any {
 
 func WebsocketEventResponse(app *engine.Router, eventData ...any) {
 	for client := range app.Rooms {
-		go func() {
+		go func(client *engine.Client) {
 			err := client.Conn.WriteJSON(NormalizeEventData(eventData))
 			if err != nil {
 				err = client.Conn.Close()
@@ -23,7 +23,7 @@ func WebsocketEventResponse(app *engine.Router, eventData ...any) {
 					fmt.Println(err)
 				}
 			}
-		}()
+		}(client)
 	}
 }
 

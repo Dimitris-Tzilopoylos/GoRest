@@ -10,6 +10,22 @@ import (
 	_ "github.com/lib/pq"
 )
 
+func (e *Engine) SetRLSPolicyInput(conn *sql.Conn, ctx context.Context, auth jwt.MapClaims) error {
+	if e.AuthDisabled {
+		return nil
+	}
+	if auth == nil || len(auth) == 0 {
+		return fmt.Errorf("no auth provided")
+	}
+	claimsJson, err := json.Marshal(auth)
+
+	if err != nil {
+		return err
+	}
+	_, err = conn.ExecContext(ctx, fmt.Sprintf("SET my.jwt_user = '%s'", string(claimsJson)))
+	return err
+}
+
 func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, body interface{}) ([]byte, error) {
 
 	ctx := context.Background()
@@ -20,14 +36,6 @@ func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, bod
 		return nil, err
 	}
 	defer conn.Close()
-	claimsJson, err := json.Marshal(auth)
-	if err != nil {
-		return nil, err
-	}
-	_, err = conn.ExecContext(context.Background(), fmt.Sprintf("SET  my.jwt_user = '%s'", string(claimsJson)))
-	if err != nil {
-		fmt.Println(err.Error())
-	}
 
 	if !databaseExists {
 		return nil, fmt.Errorf("database %s doesn't exist", database)
@@ -36,6 +44,11 @@ func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, bod
 	args, err := IsMapToInterface(body)
 	if err != nil {
 		return []byte{}, err
+	}
+
+	err = e.SetRLSPolicyInput(conn, ctx, auth)
+	if err != nil {
+		return nil, err
 	}
 
 	var response []byte
@@ -69,7 +82,7 @@ func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, bod
 			args = append(args, newArgs...)
 		}
 
-		scanner := SelectQueryContext(context.Background(), conn, query, args...)
+		scanner := SelectQueryContext(ctx, conn, query, args...)
 		var r []byte
 		cb := func(rows *sql.Rows) error {
 			err := rows.Scan(&r)

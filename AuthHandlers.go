@@ -4,6 +4,7 @@ import (
 	database "application/database"
 	engine "application/engine"
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	_ "github.com/lib/pq"
@@ -107,6 +108,45 @@ func AuthenticateHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		}
 
 		app.Json(res, http.StatusOK, map[string]string{"token": token})
+
+	}
+}
+
+func EngineLoginHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		body, err := engine.GetBodyIntoStruct(req, database.EngineUserInput{})
+		if err != nil {
+			app.ErrorResponse(res, http.StatusBadRequest, "Bad user input")
+			return
+		}
+
+		token, err := app.Engine.LoginEngineUser(db, body)
+
+		if err != nil {
+			app.ErrorResponse(res, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		app.Json(res, http.StatusOK, map[string]string{"token": token})
+
+	}
+}
+
+func EngineRegisterHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		body, err := engine.GetBodyIntoStruct(req, database.EngineUserInput{})
+		if err != nil {
+			app.ErrorResponse(res, http.StatusBadRequest, "Bad user input")
+			return
+		}
+
+		err = app.Engine.CreateEngineUser(db, body)
+		if err != nil {
+			app.ErrorResponse(res, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		app.Json(res, http.StatusOK, map[string]string{"message": fmt.Sprintf("user %s created", body.Email)})
 
 	}
 }

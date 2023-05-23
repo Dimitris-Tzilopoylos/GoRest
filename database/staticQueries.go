@@ -110,3 +110,11 @@ AND c.relrowsecurity = true;`
 const CREATE_QUERY_POLICY = `CREATE POLICY %s ON %s.%s AS %s  FOR %s TO PUBLIC USING (%s);`
 const CREATE_STATEMENT_POLICY = `CREATE POLICY ON %s.%s %s AS %s  FOR %s TO PUBLIC WITH CHECK (%s);`
 const CREATE_SUPER_USER = `CREATE ROLE %s WITH PASSWORD '%s' SUPERUSER;`
+
+const CREATE_ENGINE_ROLE = `INSERT INTO root_engine.engine_roles(role_name,permissions) VALUES($1,'{}'::json);`
+const GET_ENGINE_ROLE = `SELECT id,role_name,permissions,created_at FROM root_engine.engine_roles WHERE role_name = $1;`
+const GET_ENGINE_USER_BY_EMAIL = `SELECT engine_users.id,engine_users.email,engine_users.password,engine_users.created_at,engine_users.role_id,engine_roles.role_name 
+FROM root_engine.engine_users 
+LEFT JOIN root_engine.engine_roles ON engine_roles.id = engine_users.role_id
+WHERE email = $1;`
+const CREATE_ENGINE_SUPER_USER = "INSERT INTO root_engine.engine_users (email,password,role_id) VALUES($1,$2,$3);"

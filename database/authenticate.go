@@ -118,6 +118,11 @@ func (e *Engine) AuthenticateForDatabase(req *http.Request, database string) (*h
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		_, ok := claims["bypass_all"]
+		if ok {
+			req = req.WithContext(context.WithValue(req.Context(), "auth", claims))
+			return req, nil
+		}
 		claimsDatabase, ok := claims["database"]
 		if !ok {
 			return nil, fmt.Errorf("unauthorized")
