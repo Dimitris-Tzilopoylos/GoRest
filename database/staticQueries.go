@@ -49,6 +49,11 @@ const GET_ENGINE_RELATIONS = `SELECT relations.id,relations.alias,relations.db,r
 const GET_GLOBAL_AUTH_CONFIG = `SELECT id,created_at,db,tbl,auth_config FROM root_engine.engine_auth_provider ORDER BY created_at ASC;`
 const ENGINE_GET_WEBHOOKS = `SELECT id,endpoint,enabled,db,db_table,operation,rest,graphql,created_at,type,forward_auth_headers FROM root_engine.engine_webhooks;`
 const ENGINE_GET_DATA_TRIGGERS = `SELECT id,created_at,db,tbl,trigger_config FROM root_engine.engine_data_triggers;`
+const CREATE_DATA_TRIGGER = `INSERT INTO root_engine.engine_data_triggers(db,tbl,trigger_config) VALUES ($1,$2,$3);`
+const UPDATE_DATA_TRIGGER_BY_ID = `UPDATE root_engine.engine_data_triggers SET  trigger_config = $1 WHERE id = $2`
+const DELETE_DATA_TRIGGERS_BY_DATABASE_TABLE_NAME = `DELETE FROM root_engine.engine_data_triggers WHERE db = $1 AND tbl = $2`
+const DELETE_DATA_TRIGGERS_BY_DATABASE_NAME = `DELETE FROM root_engine.engine_data_triggers WHERE db = $1`
+const DELETE_DATA_TRIGGER_BY_ID = `DELETE FROM root_engine.engine_data_triggers WHERE id = $1`
 const ENGINE_GET_RLS = `SELECT id,policy_name,policy_for,policy_type,db,tbl,enabled,created_at,sql_input,description FROM root_engine.engine_row_level_security;`
 const CREATE_ENGINE_RLS = `INSERT INTO root_engine.engine_row_level_security(policy_name,policy_for,policy_type,db,tbl,enabled,sql_input,description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8);`
 const DELETE_ENGINE_RLS = `DELETE FROM root_engine.engine_row_level_security WHERE policy_name = $1`

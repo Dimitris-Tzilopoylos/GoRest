@@ -60,6 +60,31 @@ func ParseTriggerConfigBooleanValue(key string, value map[string]interface{}) bo
 	return booleanValue
 }
 
+func (enigne *Engine) CreateDataTrigger(db *sql.DB, input DataTriggerInput) error {
+	// NOT IMPLEMENTED
+	return nil
+}
+
+func (enigne *Engine) DeleteDataTriggerByID(db *sql.DB, input DataTriggerInput) error {
+	// NOT IMPLEMENTED
+	return nil
+}
+
+func (enigne *Engine) DeleteDataTriggerByDatabaseTable(db *sql.DB, input DataTriggerInput) error {
+	// NOT IMPLEMENTED
+	return nil
+}
+
+func (enigne *Engine) DeleteDataTriggerByDatabase(db *sql.DB, input DataTriggerInput) error {
+	// NOT IMPLEMENTED
+	return nil
+}
+
+func (enigne *Engine) UpdateDataTriggerByID(db *sql.DB, input DataTriggerInput) error {
+	// NOT IMPLEMENTED
+	return nil
+}
+
 func (enigne *Engine) LoadDataTriggers(db *sql.DB) map[string]map[string]DataTrigger {
 	scanner := Query(db, ENGINE_GET_DATA_TRIGGERS)
 	dataTriggers := make(map[string]map[string]DataTrigger)
