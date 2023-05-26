@@ -36,6 +36,47 @@ type IndexInput struct {
 	OnUpdate    string        `json:"onUpdate"`
 }
 
+func ValidateForeignKeyActions(input IndexInput) bool {
+	allowedInputs := []string{"RESTRICT", "CASCADE", "NO ACTION"}
+	isUpdateOk := true
+	isDeleteOk := true
+	if len(input.OnUpdate) > 0 {
+		for i := 0; i < len(allowedInputs); i++ {
+			if strings.EqualFold(allowedInputs[i], input.OnUpdate) {
+				break
+			}
+			if i == 2 {
+				isUpdateOk = false
+			}
+		}
+	}
+
+	if len(input.OnDelete) > 0 {
+		for i := 0; i < len(allowedInputs); i++ {
+			if strings.EqualFold(allowedInputs[i], input.OnDelete) {
+				break
+			}
+			if i == 2 {
+				isDeleteOk = false
+			}
+		}
+	}
+
+	return isDeleteOk && isUpdateOk
+}
+
+func MutateForeignKeyActions(index *IndexInput) IndexInput {
+	if len(index.OnUpdate) > 0 {
+		index.OnUpdate = fmt.Sprintf(" ON UPDATE %s", index.OnUpdate)
+	}
+
+	if len(index.OnDelete) > 0 {
+		index.OnDelete = fmt.Sprintf(" ON DELETE %s", index.OnDelete)
+	}
+
+	return *index
+}
+
 func CreateIndexName(prefix string, table TableInput, columns []ColumnInput) string {
 	colNames := GetColumnNamesInStringArr(columns)
 	sort.Strings(colNames)
@@ -70,6 +111,11 @@ func CreateForeignIndex(db *sql.DB, table TableInput, index IndexInput) error {
 		return fmt.Errorf("invalid configuration for foreign key")
 	}
 
+	isValid := ValidateForeignKeyActions(index)
+	if !isValid {
+		return fmt.Errorf("invalid action configuration for foreign key")
+	}
+	index = MutateForeignKeyActions(&index)
 	columnNames := GetColumnNamesInStringArr(index.Columns)
 	refColumnNames := GetColumnNamesInStringArr(index.RefColumns)
 
@@ -83,15 +129,9 @@ func CreateForeignIndex(db *sql.DB, table TableInput, index IndexInput) error {
 		index.RefDatabase,
 		index.RefTable,
 		strings.Join(refColumnNames, ","),
+		index.OnUpdate,
+		index.OnDelete,
 	)
-
-	if len(index.OnDelete) > 0 {
-		query += fmt.Sprintf(" ON DELETE %s", index.OnDelete)
-	}
-
-	if len(index.OnUpdate) > 0 {
-		query += fmt.Sprintf(" ON UPDATE %s", index.OnUpdate)
-	}
 
 	_, err := db.Query(query)
 	LogSql(query)
