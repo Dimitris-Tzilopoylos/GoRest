@@ -134,3 +134,14 @@ func CheckSQLStringValidity(db *sql.DB, query string) error {
 	return nil
 
 }
+
+func (e *Engine) EngineModelsToNotCycledValue() []Model {
+	models := []Model{}
+	for _, model := range e.Models {
+		newModel := *model
+		newModel.Relations = nil
+		models = append(models, newModel)
+
+	}
+	return models
+}

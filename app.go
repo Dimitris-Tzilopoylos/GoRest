@@ -10,6 +10,12 @@ func main() {
 	app.Get(HomeRoute, InfoHandler(app))
 	app.Get(AliveRoute, AliveHandler(app))
 
+	// ENGINE ROUTES
+	app.Use(EngineRoute, AuthMainMiddleware(app))
+	app.Get(EngineRoute, GetEngineConfigHandler(app))
+	app.Use(EngineReloadRoute, AuthMainMiddleware(app))
+	app.Get(EngineReloadRoute, ReloadEngine(app, db))
+
 	// DATA ROUTES
 	app.Use(QueryRoute, AuthDBMiddleware(app))
 	app.Post(QueryRoute, SelectHandler(app, db))

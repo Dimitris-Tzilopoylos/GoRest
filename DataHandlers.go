@@ -14,7 +14,7 @@ func SelectHandler(app *engine.Router, db *sql.DB) http.HandlerFunc {
 		params := engine.GetParams(req)
 		database := params["database"]
 		auth := engine.GetAuth(req)
-		x, err := app.Engine.SelectExec(auth, db, database, body)
+		x, err := app.Engine.SelectExec(auth, db, database, body, false)
 		if err != nil {
 			app.ErrorResponse(res, http.StatusInternalServerError, err.Error())
 			return

@@ -92,7 +92,7 @@ func (model *Model) GetModelRelation(alias string) (*Model, error) {
 	return nil, fmt.Errorf("no such relation")
 }
 
-func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string) (string, []interface{}, error) {
+func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx *int, relationInfo *DatabaseRelationSchema, parentAlias string, isGraphQL bool) (string, []interface{}, error) {
 	query := ``
 	args := make([]interface{}, 0)
 	if !IsEligibleModelRequestBody(body) {
@@ -108,7 +108,7 @@ func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx 
 	makeQuery := func(model *Model, bodyEntities interface{}, aliasPart string) error {
 		parsedBody, err := IsMapToInterface(bodyEntities)
 		currentAlias := fmt.Sprintf("_%d_%s", depth, aliasPart)
-		modelColumnsString := model.GetModelColumnsWithAlias("", body, currentAlias)
+		modelColumnsString := model.GetModelColumnsWithAlias("", body, currentAlias, isGraphQL)
 
 		if _where, ok := parsedBody["_where"]; ok {
 			initialQuery := " WHERE "
@@ -177,12 +177,16 @@ func (model *Model) Select(auth jwt.MapClaims, body interface{}, depth int, idx 
 						args = append(args, queryArgs...)
 					} else {
 						depth = depth + 1
-						queryStr, queryArgs, err := relatedModel.Select(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias)
+						queryStr, queryArgs, err := relatedModel.Select(auth, bodyRelation[key], depth, idx, relatedModelInfo, currentAlias, isGraphQL)
 						if err != nil {
 							return err
 						}
+						commaForParentCols := ","
+						if len(modelColumnsString) == 0 {
+							commaForParentCols = ""
+						}
 						relationQueryAlias := fmt.Sprintf("_%d_%s", depth, relatedModel.Table)
-						query = fmt.Sprintf(query, fmt.Sprintf(",%s.%s%s", relationQueryAlias, relatedModelInfo.Alias, "%s"))
+						query = fmt.Sprintf(query, fmt.Sprintf("%s%s.%s%s", commaForParentCols, relationQueryAlias, relatedModelInfo.Alias, "%s"))
 						query += fmt.Sprintf(` LEFT OUTER JOIN LATERAL (%s) AS %s on true `, queryStr, relationQueryAlias)
 						args = append(args, queryArgs...)
 					}
@@ -1280,19 +1284,17 @@ func (model *Model) BuildAVGAggregate(role string, body interface{}, alias strin
 	return ""
 }
 
-func (model *Model) GetModelColumnsWithAlias(role string, body interface{}, alias string) string {
+func (model *Model) GetModelColumnsWithAlias(role string, body interface{}, alias string, isGraphQL bool) string {
 	columns := []string{}
 	prefix := ""
 	if len(alias) > 0 {
 		prefix = fmt.Sprintf("%s.", alias)
 	}
-	parsedBody, err := IsMapToInterface(body)
-
 	hasSelect := false
 	_select := make(map[string]interface{})
+	parsedBody, err := IsMapToInterface(body)
 	if err == nil {
 		x, ok := parsedBody["_select"]
-
 		if ok {
 			switch y := x.(type) {
 			case map[string]interface{}:
@@ -1310,7 +1312,7 @@ func (model *Model) GetModelColumnsWithAlias(role string, body interface{}, alia
 		return ""
 	}
 	for column := range allowedColumnsMap {
-		if hasSelect {
+		if hasSelect || isGraphQL {
 			if _, ok := _select[column]; ok {
 				columns = append(columns, fmt.Sprintf("%s%s", prefix, column))
 

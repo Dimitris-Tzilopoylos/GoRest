@@ -180,7 +180,7 @@ func InitializeModels(db *sql.DB) ([]*Model, error) {
 		}
 		for _, relation := range relations {
 			for _, model := range models {
-				if model.Table == relation.FromTable {
+				if model.Table == relation.FromTable && model.Database == relation.Database {
 					relatedModel := Find(models, func(model *Model) bool {
 						return model.Table == relation.ToTable && model.Database == relation.Database
 					})

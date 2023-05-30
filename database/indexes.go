@@ -94,7 +94,7 @@ func CreateUniqueIndex(db *sql.DB, table TableInput, index IndexInput) error {
 
 	indexName := CreateIndexName("unique_idx", table, index.Columns)
 
-	query := fmt.Sprintf(CREATE_UNIQUE_INDEX, indexName, table.Database, table.Name, strings.Join(columnParts, ","))
+	query := fmt.Sprintf(CREATE_UNIQUE_INDEX, table.Database, table.Name, indexName, "UNIQUE", strings.Join(columnParts, ","))
 
 	_, err := db.Query(query)
 	if err != nil {
@@ -254,7 +254,7 @@ func CreateIndex(db *sql.DB, table TableInput, index IndexInput) error {
 	case PRIMARY:
 		err = CreatePrimaryIndex(db, table, index)
 	default:
-		break
+		err = fmt.Errorf("index type is not supported via this api")
 	}
 
 	return err
@@ -275,8 +275,16 @@ func CreateIndexes(db *sql.DB, table TableInput) error {
 	return nil
 }
 
-func DropIndex(db *sql.DB, indexName string) error {
-	query := fmt.Sprintf(DROP_INDEX, indexName)
+func DropIndex(db *sql.DB, input IndexInput) error {
+	query := ""
+	switch input.Type {
+	case UNIQUE:
+		query = fmt.Sprintf(DROP_UNIQUE_INDEX, input.Name)
+		db.Query(query)
+
+	}
+	query = fmt.Sprintf(DROP_INDEX, input.Database, input.Table, input.Name)
+
 	_, err := db.Query(query)
 	LogSql(query)
 

@@ -14,8 +14,11 @@ func (e *Engine) SetRLSPolicyInput(conn *sql.Conn, ctx context.Context, auth jwt
 	if e.AuthDisabled {
 		return nil
 	}
-	if auth == nil || len(auth) == 0 {
+	if len(auth) == 0 {
 		return fmt.Errorf("no auth provided")
+	}
+	if _, ok := auth["bypass_auth"]; ok {
+		return nil
 	}
 	claimsJson, err := json.Marshal(auth)
 
@@ -26,7 +29,7 @@ func (e *Engine) SetRLSPolicyInput(conn *sql.Conn, ctx context.Context, auth jwt
 	return err
 }
 
-func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, body interface{}) ([]byte, error) {
+func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, body interface{}, isGraphQL bool) ([]byte, error) {
 
 	ctx := context.Background()
 	databaseExists := e.DatabaseExists(database)
@@ -74,7 +77,7 @@ func (e *Engine) SelectExec(auth jwt.MapClaims, db *sql.DB, database string, bod
 			query = queryString
 			args = append(args, newArgs...)
 		} else {
-			queryString, newArgs, err := (*model).Select(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key))
+			queryString, newArgs, err := (*model).Select(auth, modelBody, 0, &idx, nil, fmt.Sprintf("_0_%s", key), isGraphQL)
 			if err != nil {
 				return nil, err
 			}

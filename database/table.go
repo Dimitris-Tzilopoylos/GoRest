@@ -21,6 +21,18 @@ type Column struct {
 	DefaultValue string `json:"default_value"`
 }
 
+var columnTypeToSpecialDefaultValueMap map[string]string = map[string]string{
+	"uuid": "gen_random_uuid()",
+}
+
+var columnTypesToEmptyDefaultValueString map[string]bool = map[string]bool{
+	"varchar":           true,
+	"character varying": true,
+	"text":              true,
+	"longtext":          true,
+	"char":              true,
+}
+
 func GetTableNames(db *sql.DB, database string) ([]string, error) {
 	var table string
 	tables := []string{}
@@ -78,33 +90,33 @@ func GetTableIndexes(db *sql.DB, database string, table string) ([]Index, error)
 	}
 	err := scanner(cb)
 
-	scannerUnique := Query(db, GET_UNIQUE_INDXES, database, table)
-	unqCB := func(rows *sql.Rows) error {
-		var index Index
-		var unq bool = false
-		err = rows.Scan(&index.Database, &index.Table, &index.Name, &unq, &index.Column)
-		if err != nil {
-			panic(err)
-		}
+	// scannerUnique := Query(db, GET_UNIQUE_INDXES, database, table)
+	// unqCB := func(rows *sql.Rows) error {
+	// 	var index Index
+	// 	var unq bool = false
+	// 	err = rows.Scan(&index.Database, &index.Table, &index.Name, &unq, &index.Column)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 
-		if unq {
-			columns := strings.Split(index.Column, ",")
-			for _, col := range columns {
-				colName := strings.Trim(col, " ")
-				newIndex := Index{
-					Name:   index.Name,
-					Type:   "UNIQUE KEY",
-					Table:  index.Table,
-					Column: colName,
-				}
-				indexes = append(indexes, newIndex)
-			}
-		}
+	// 	if unq {
+	// 		columns := strings.Split(index.Column, ",")
+	// 		for _, col := range columns {
+	// 			colName := strings.Trim(col, " ")
+	// 			newIndex := Index{
+	// 				Name:   index.Name,
+	// 				Type:   "UNIQUE",
+	// 				Table:  index.Table,
+	// 				Column: colName,
+	// 			}
+	// 			indexes = append(indexes, newIndex)
+	// 		}
+	// 	}
 
-		return err
-	}
+	// 	return err
+	// }
 
-	err = scannerUnique(unqCB)
+	// err = scannerUnique(unqCB)
 
 	return indexes, err
 }
@@ -120,8 +132,23 @@ func GetColumnFromInputToSqlString(column ColumnInput) (string, error) {
 	}
 
 	if column.DefaultValue != nil {
-		str += fmt.Sprintf(` DEFAULT '%v'::%s `, column.DefaultValue, column.Type)
-
+		if specialValue, ok := columnTypeToSpecialDefaultValueMap[column.Type]; ok {
+			if ok {
+				str += fmt.Sprintf(` DEFAULT %s `, specialValue)
+			}
+		} else {
+			strDefVal, ok := column.DefaultValue.(string)
+			if !ok {
+				return "", fmt.Errorf("bad input")
+			}
+			if len(strDefVal) == 0 {
+				if ok := columnTypesToEmptyDefaultValueString[column.Type]; ok {
+					str += fmt.Sprintf(` DEFAULT '%v'::%s `, column.DefaultValue, column.Type)
+				}
+			} else {
+				str += fmt.Sprintf(` DEFAULT '%v'::%s `, column.DefaultValue, column.Type)
+			}
+		}
 	}
 	return str, nil
 }

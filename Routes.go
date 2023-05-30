@@ -6,6 +6,10 @@ import "application/environment"
 var HomeRoute string = "/"
 var AliveRoute string = "/alive"
 
+//ENGINE ROUTES
+var EngineRoute string = "/engine"
+var EngineReloadRoute string = "/engine/reload"
+
 // DATA ROUTES
 var QueryRoute string = "/<str:database>"
 var StatementRoute string = "/<str:database>/actions"

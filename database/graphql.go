@@ -790,7 +790,7 @@ func (e *Engine) GraphqlQueryResolve(inputData any, auth jwt.MapClaims, db *sql.
 
 	results := []byte{}
 	for dbName, payload := range configByDatabase {
-		result, err := e.SelectExec(auth, db, dbName, payload)
+		result, err := e.SelectExec(auth, db, dbName, payload, true)
 		if err != nil {
 			return nil, err
 		}
@@ -946,7 +946,6 @@ func astToMap(node ast.Node, variables map[string]interface{}, isAggregate bool)
 		if node.SelectionSet != nil {
 			selectionSet := astToMap(node.SelectionSet, variables, isAggregation)
 			parsedSelectionSet, err := IsMapToInterface(selectionSet)
-
 			if err != nil {
 				return result
 			}

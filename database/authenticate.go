@@ -204,8 +204,10 @@ func (e *Engine) Login(role string, db *sql.DB, payload AuthActionPayload) (stri
 		}
 	}
 	queryPayload[payload.Table] = payload.Query
-
-	result, err := e.SelectExec(nil, db, payload.Database, queryPayload)
+	authClaims := jwt.MapClaims{
+		"bypass_auth": true,
+	}
+	result, err := e.SelectExec(authClaims, db, payload.Database, queryPayload, false)
 
 	if err != nil {
 		return "", err

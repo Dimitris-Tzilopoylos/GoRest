@@ -11,7 +11,7 @@ type ColumnInput struct {
 	MaxLength     int64       `json:"maxLength"`
 	Nullable      bool        `json:"nullable"`
 	DefaultValue  interface{} `json:"defaultValue"`
-	AutoIncrement bool
+	AutoIncrement bool        `json:"auto_increment"`
 }
 
 func ValidateCreateColumn(engineMap map[string]map[string]*Model, tableInput TableInput) (bool, error) {

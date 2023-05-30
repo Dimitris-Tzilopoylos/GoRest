@@ -100,6 +100,18 @@ ASC_NULLS_LAST
 DSC_NULLS_FIRST
 DESC_NULLS_LAST
 }
+type bi_companies {
+id: Int!
+name: String!
+domain: String
+year_founded: String
+industry: String!
+locality: String
+country: String
+linked_in_url: String
+current_employee_estimate: String
+total_employee_estimate: String
+}
 type eshop_attribute_categories {
 id: Int!
 name: Object!
@@ -145,12 +157,12 @@ id: Int!
 user_id: Int!
 product_id: Int!
 created_at: String!
-favorite_to_member(_where: eshop_members_bool_exp, _groupBy: [eshop_members_enum], _orderBy: eshop_members_order_by_exp, _distinct: [eshop_members_enum], _limit: Int, _offset: Int):eshop_members
 favorite_product(_where: eshop_products_bool_exp, _groupBy: [eshop_products_enum], _orderBy: eshop_products_order_by_exp, _distinct: [eshop_products_enum], _limit: Int, _offset: Int):eshop_products
 favorite_member_products(_where: eshop_products_bool_exp, _groupBy: [eshop_products_enum], _orderBy: eshop_products_order_by_exp, _distinct: [eshop_products_enum], _limit: Int, _offset: Int):eshop_products
+favorite_to_member(_where: eshop_members_bool_exp, _groupBy: [eshop_members_enum], _orderBy: eshop_members_order_by_exp, _distinct: [eshop_members_enum], _limit: Int, _offset: Int):eshop_members
+favorite_to_member_aggregate(_where: eshop_members_bool_exp, _orderBy: eshop_members_order_by_exp, _groupBy: [eshop_members_enum], _distinct: [eshop_members_enum]): eshop_members_aggregate
 favorite_product_aggregate(_where: eshop_products_bool_exp, _orderBy: eshop_products_order_by_exp, _groupBy: [eshop_products_enum], _distinct: [eshop_products_enum]): eshop_products_aggregate
 favorite_member_products_aggregate(_where: eshop_products_bool_exp, _orderBy: eshop_products_order_by_exp, _groupBy: [eshop_products_enum], _distinct: [eshop_products_enum]): eshop_products_aggregate
-favorite_to_member_aggregate(_where: eshop_members_bool_exp, _orderBy: eshop_members_order_by_exp, _groupBy: [eshop_members_enum], _distinct: [eshop_members_enum]): eshop_members_aggregate
 }
 type eshop_inventory {
 id: Int!
@@ -171,12 +183,8 @@ phone: String
 company_name: String
 company_address: String
 vat: String
-member_shops(_where: shop_shop_to_member_bool_exp, _groupBy: [shop_shop_to_member_enum], _orderBy: shop_shop_to_member_order_by_exp, _distinct: [shop_shop_to_member_enum], _limit: Int, _offset: Int):shop_shop_to_member
-role(_where: shop_roles_bool_exp, _groupBy: [shop_roles_enum], _orderBy: shop_roles_order_by_exp, _distinct: [shop_roles_enum], _limit: Int, _offset: Int):shop_roles
 member_country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
 member_country_aggregate(_where: eshop_countries_bool_exp, _orderBy: eshop_countries_order_by_exp, _groupBy: [eshop_countries_enum], _distinct: [eshop_countries_enum]): eshop_countries_aggregate
-member_shops_aggregate(_where: shop_shop_to_member_bool_exp, _orderBy: shop_shop_to_member_order_by_exp, _groupBy: [shop_shop_to_member_enum], _distinct: [shop_shop_to_member_enum]): shop_shop_to_member_aggregate
-role_aggregate(_where: shop_roles_bool_exp, _orderBy: shop_roles_order_by_exp, _groupBy: [shop_roles_enum], _distinct: [shop_roles_enum]): shop_roles_aggregate
 }
 type eshop_newsletter {
 id: Int!
@@ -196,18 +204,18 @@ name: Object!
 product_name: String
 original_price: String!
 discount_price: String
-orders_by_product(_where: eshop_orders_bool_exp, _groupBy: [eshop_orders_enum], _orderBy: eshop_orders_order_by_exp, _distinct: [eshop_orders_enum], _limit: Int, _offset: Int):eshop_orders
-products_by_order(_where: eshop_products_bool_exp, _groupBy: [eshop_products_enum], _orderBy: eshop_products_order_by_exp, _distinct: [eshop_products_enum], _limit: Int, _offset: Int):eshop_products
-order(_where: eshop_orders_bool_exp, _groupBy: [eshop_orders_enum], _orderBy: eshop_orders_order_by_exp, _distinct: [eshop_orders_enum], _limit: Int, _offset: Int):eshop_orders
 product_shipping_status(_where: eshop_shipping_statuses_bool_exp, _groupBy: [eshop_shipping_statuses_enum], _orderBy: eshop_shipping_statuses_order_by_exp, _distinct: [eshop_shipping_statuses_enum], _limit: Int, _offset: Int):eshop_shipping_statuses
 product_payment_status(_where: eshop_payment_statuses_bool_exp, _groupBy: [eshop_payment_statuses_enum], _orderBy: eshop_payment_statuses_order_by_exp, _distinct: [eshop_payment_statuses_enum], _limit: Int, _offset: Int):eshop_payment_statuses
 product_by_order(_where: eshop_products_bool_exp, _groupBy: [eshop_products_enum], _orderBy: eshop_products_order_by_exp, _distinct: [eshop_products_enum], _limit: Int, _offset: Int):eshop_products
-products_by_order_aggregate(_where: eshop_products_bool_exp, _orderBy: eshop_products_order_by_exp, _groupBy: [eshop_products_enum], _distinct: [eshop_products_enum]): eshop_products_aggregate
-order_aggregate(_where: eshop_orders_bool_exp, _orderBy: eshop_orders_order_by_exp, _groupBy: [eshop_orders_enum], _distinct: [eshop_orders_enum]): eshop_orders_aggregate
+orders_by_product(_where: eshop_orders_bool_exp, _groupBy: [eshop_orders_enum], _orderBy: eshop_orders_order_by_exp, _distinct: [eshop_orders_enum], _limit: Int, _offset: Int):eshop_orders
+products_by_order(_where: eshop_products_bool_exp, _groupBy: [eshop_products_enum], _orderBy: eshop_products_order_by_exp, _distinct: [eshop_products_enum], _limit: Int, _offset: Int):eshop_products
+order(_where: eshop_orders_bool_exp, _groupBy: [eshop_orders_enum], _orderBy: eshop_orders_order_by_exp, _distinct: [eshop_orders_enum], _limit: Int, _offset: Int):eshop_orders
 product_shipping_status_aggregate(_where: eshop_shipping_statuses_bool_exp, _orderBy: eshop_shipping_statuses_order_by_exp, _groupBy: [eshop_shipping_statuses_enum], _distinct: [eshop_shipping_statuses_enum]): eshop_shipping_statuses_aggregate
 product_payment_status_aggregate(_where: eshop_payment_statuses_bool_exp, _orderBy: eshop_payment_statuses_order_by_exp, _groupBy: [eshop_payment_statuses_enum], _distinct: [eshop_payment_statuses_enum]): eshop_payment_statuses_aggregate
 product_by_order_aggregate(_where: eshop_products_bool_exp, _orderBy: eshop_products_order_by_exp, _groupBy: [eshop_products_enum], _distinct: [eshop_products_enum]): eshop_products_aggregate
 orders_by_product_aggregate(_where: eshop_orders_bool_exp, _orderBy: eshop_orders_order_by_exp, _groupBy: [eshop_orders_enum], _distinct: [eshop_orders_enum]): eshop_orders_aggregate
+products_by_order_aggregate(_where: eshop_products_bool_exp, _orderBy: eshop_products_order_by_exp, _groupBy: [eshop_products_enum], _distinct: [eshop_products_enum]): eshop_products_aggregate
+order_aggregate(_where: eshop_orders_bool_exp, _orderBy: eshop_orders_order_by_exp, _groupBy: [eshop_orders_enum], _distinct: [eshop_orders_enum]): eshop_orders_aggregate
 }
 type eshop_orders {
 id: Int!
@@ -247,14 +255,14 @@ created_at: String!
 returned_at: String!
 shipped_at: String!
 shipping_company_id: Int!
-shipping_country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
-country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
-shipping_company(_where: eshop_shipping_companies_bool_exp, _groupBy: [eshop_shipping_companies_enum], _orderBy: eshop_shipping_companies_order_by_exp, _distinct: [eshop_shipping_companies_enum], _limit: Int, _offset: Int):eshop_shipping_companies
 shipping_status(_where: eshop_shipping_statuses_bool_exp, _groupBy: [eshop_shipping_statuses_enum], _orderBy: eshop_shipping_statuses_order_by_exp, _distinct: [eshop_shipping_statuses_enum], _limit: Int, _offset: Int):eshop_shipping_statuses
 payment_method(_where: eshop_payment_methods_bool_exp, _groupBy: [eshop_payment_methods_enum], _orderBy: eshop_payment_methods_order_by_exp, _distinct: [eshop_payment_methods_enum], _limit: Int, _offset: Int):eshop_payment_methods
 payment_status(_where: eshop_payment_statuses_bool_exp, _groupBy: [eshop_payment_statuses_enum], _orderBy: eshop_payment_statuses_order_by_exp, _distinct: [eshop_payment_statuses_enum], _limit: Int, _offset: Int):eshop_payment_statuses
 order_products(_where: eshop_order_products_bool_exp, _groupBy: [eshop_order_products_enum], _orderBy: eshop_order_products_order_by_exp, _distinct: [eshop_order_products_enum], _limit: Int, _offset: Int):eshop_order_products
 order_user(_where: eshop_members_bool_exp, _groupBy: [eshop_members_enum], _orderBy: eshop_members_order_by_exp, _distinct: [eshop_members_enum], _limit: Int, _offset: Int):eshop_members
+shipping_country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
+country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
+shipping_company(_where: eshop_shipping_companies_bool_exp, _groupBy: [eshop_shipping_companies_enum], _orderBy: eshop_shipping_companies_order_by_exp, _distinct: [eshop_shipping_companies_enum], _limit: Int, _offset: Int):eshop_shipping_companies
 payment_status_aggregate(_where: eshop_payment_statuses_bool_exp, _orderBy: eshop_payment_statuses_order_by_exp, _groupBy: [eshop_payment_statuses_enum], _distinct: [eshop_payment_statuses_enum]): eshop_payment_statuses_aggregate
 order_products_aggregate(_where: eshop_order_products_bool_exp, _orderBy: eshop_order_products_order_by_exp, _groupBy: [eshop_order_products_enum], _distinct: [eshop_order_products_enum]): eshop_order_products_aggregate
 order_user_aggregate(_where: eshop_members_bool_exp, _orderBy: eshop_members_order_by_exp, _groupBy: [eshop_members_enum], _distinct: [eshop_members_enum]): eshop_members_aggregate
@@ -323,9 +331,9 @@ tag_id: Int!
 tag(_where: eshop_tags_bool_exp, _groupBy: [eshop_tags_enum], _orderBy: eshop_tags_order_by_exp, _distinct: [eshop_tags_enum], _limit: Int, _offset: Int):eshop_tags
 product_by_tag(_where: eshop_products_bool_exp, _groupBy: [eshop_products_enum], _orderBy: eshop_products_order_by_exp, _distinct: [eshop_products_enum], _limit: Int, _offset: Int):eshop_products
 tags(_where: eshop_tags_bool_exp, _groupBy: [eshop_tags_enum], _orderBy: eshop_tags_order_by_exp, _distinct: [eshop_tags_enum], _limit: Int, _offset: Int):eshop_tags
-tags_aggregate(_where: eshop_tags_bool_exp, _orderBy: eshop_tags_order_by_exp, _groupBy: [eshop_tags_enum], _distinct: [eshop_tags_enum]): eshop_tags_aggregate
 tag_aggregate(_where: eshop_tags_bool_exp, _orderBy: eshop_tags_order_by_exp, _groupBy: [eshop_tags_enum], _distinct: [eshop_tags_enum]): eshop_tags_aggregate
 product_by_tag_aggregate(_where: eshop_products_bool_exp, _orderBy: eshop_products_order_by_exp, _groupBy: [eshop_products_enum], _distinct: [eshop_products_enum]): eshop_products_aggregate
+tags_aggregate(_where: eshop_tags_bool_exp, _orderBy: eshop_tags_order_by_exp, _groupBy: [eshop_tags_enum], _distinct: [eshop_tags_enum]): eshop_tags_aggregate
 }
 type eshop_product_variants {
 id: Int!
@@ -352,16 +360,16 @@ weight: String!
 height: String!
 width: String!
 length: String!
-product_tags(_where: eshop_product_to_tag_bool_exp, _groupBy: [eshop_product_to_tag_enum], _orderBy: eshop_product_to_tag_order_by_exp, _distinct: [eshop_product_to_tag_enum], _limit: Int, _offset: Int):eshop_product_to_tag
-product_ratings(_where: eshop_product_ratings_bool_exp, _groupBy: [eshop_product_ratings_enum], _orderBy: eshop_product_ratings_order_by_exp, _distinct: [eshop_product_ratings_enum], _limit: Int, _offset: Int):eshop_product_ratings
 product_variants(_where: eshop_product_variants_bool_exp, _groupBy: [eshop_product_variants_enum], _orderBy: eshop_product_variants_order_by_exp, _distinct: [eshop_product_variants_enum], _limit: Int, _offset: Int):eshop_product_variants
 product_attributes(_where: eshop_product_attributes_bool_exp, _groupBy: [eshop_product_attributes_enum], _orderBy: eshop_product_attributes_order_by_exp, _distinct: [eshop_product_attributes_enum], _limit: Int, _offset: Int):eshop_product_attributes
 category(_where: eshop_categories_bool_exp, _groupBy: [eshop_categories_enum], _orderBy: eshop_categories_order_by_exp, _distinct: [eshop_categories_enum], _limit: Int, _offset: Int):eshop_categories
-product_variants_aggregate(_where: eshop_product_variants_bool_exp, _orderBy: eshop_product_variants_order_by_exp, _groupBy: [eshop_product_variants_enum], _distinct: [eshop_product_variants_enum]): eshop_product_variants_aggregate
-product_attributes_aggregate(_where: eshop_product_attributes_bool_exp, _orderBy: eshop_product_attributes_order_by_exp, _groupBy: [eshop_product_attributes_enum], _distinct: [eshop_product_attributes_enum]): eshop_product_attributes_aggregate
+product_tags(_where: eshop_product_to_tag_bool_exp, _groupBy: [eshop_product_to_tag_enum], _orderBy: eshop_product_to_tag_order_by_exp, _distinct: [eshop_product_to_tag_enum], _limit: Int, _offset: Int):eshop_product_to_tag
+product_ratings(_where: eshop_product_ratings_bool_exp, _groupBy: [eshop_product_ratings_enum], _orderBy: eshop_product_ratings_order_by_exp, _distinct: [eshop_product_ratings_enum], _limit: Int, _offset: Int):eshop_product_ratings
 category_aggregate(_where: eshop_categories_bool_exp, _orderBy: eshop_categories_order_by_exp, _groupBy: [eshop_categories_enum], _distinct: [eshop_categories_enum]): eshop_categories_aggregate
 product_tags_aggregate(_where: eshop_product_to_tag_bool_exp, _orderBy: eshop_product_to_tag_order_by_exp, _groupBy: [eshop_product_to_tag_enum], _distinct: [eshop_product_to_tag_enum]): eshop_product_to_tag_aggregate
 product_ratings_aggregate(_where: eshop_product_ratings_bool_exp, _orderBy: eshop_product_ratings_order_by_exp, _groupBy: [eshop_product_ratings_enum], _distinct: [eshop_product_ratings_enum]): eshop_product_ratings_aggregate
+product_variants_aggregate(_where: eshop_product_variants_bool_exp, _orderBy: eshop_product_variants_order_by_exp, _groupBy: [eshop_product_variants_enum], _distinct: [eshop_product_variants_enum]): eshop_product_variants_aggregate
+product_attributes_aggregate(_where: eshop_product_attributes_bool_exp, _orderBy: eshop_product_attributes_order_by_exp, _groupBy: [eshop_product_attributes_enum], _distinct: [eshop_product_attributes_enum]): eshop_product_attributes_aggregate
 }
 type eshop_roles {
 id: Int!
@@ -408,8 +416,8 @@ websites_aggregate(_where: eshop_supercategory_to_website_bool_exp, _orderBy: es
 type eshop_supercategory_to_website {
 website_id: Int!
 supercategory_id: Int!
-supercategory(_where: eshop_supercategories_bool_exp, _groupBy: [eshop_supercategories_enum], _orderBy: eshop_supercategories_order_by_exp, _distinct: [eshop_supercategories_enum], _limit: Int, _offset: Int):eshop_supercategories
 website(_where: eshop_websites_bool_exp, _groupBy: [eshop_websites_enum], _orderBy: eshop_websites_order_by_exp, _distinct: [eshop_websites_enum], _limit: Int, _offset: Int):eshop_websites
+supercategory(_where: eshop_supercategories_bool_exp, _groupBy: [eshop_supercategories_enum], _orderBy: eshop_supercategories_order_by_exp, _distinct: [eshop_supercategories_enum], _limit: Int, _offset: Int):eshop_supercategories
 website_aggregate(_where: eshop_websites_bool_exp, _orderBy: eshop_websites_order_by_exp, _groupBy: [eshop_websites_enum], _distinct: [eshop_websites_enum]): eshop_websites_aggregate
 supercategory_aggregate(_where: eshop_supercategories_bool_exp, _orderBy: eshop_supercategories_order_by_exp, _groupBy: [eshop_supercategories_enum], _distinct: [eshop_supercategories_enum]): eshop_supercategories_aggregate
 }
@@ -431,12 +439,8 @@ last_name: String!
 password: String!
 created_at: String!
 role_id: Int
-member_role(_where: ianos_roles_bool_exp, _groupBy: [ianos_roles_enum], _orderBy: ianos_roles_order_by_exp, _distinct: [ianos_roles_enum], _limit: Int, _offset: Int):ianos_roles
-test_role(_where: test_role_bool_exp, _groupBy: [test_role_enum], _orderBy: test_role_order_by_exp, _distinct: [test_role_enum], _limit: Int, _offset: Int):test_role
 user_role(_where: eshop_roles_bool_exp, _groupBy: [eshop_roles_enum], _orderBy: eshop_roles_order_by_exp, _distinct: [eshop_roles_enum], _limit: Int, _offset: Int):eshop_roles
 user_role_aggregate(_where: eshop_roles_bool_exp, _orderBy: eshop_roles_order_by_exp, _groupBy: [eshop_roles_enum], _distinct: [eshop_roles_enum]): eshop_roles_aggregate
-member_role_aggregate(_where: ianos_roles_bool_exp, _orderBy: ianos_roles_order_by_exp, _groupBy: [ianos_roles_enum], _distinct: [ianos_roles_enum]): ianos_roles_aggregate
-test_role_aggregate(_where: test_role_bool_exp, _orderBy: test_role_order_by_exp, _groupBy: [test_role_enum], _distinct: [test_role_enum]): test_role_aggregate
 }
 type eshop_variants {
 id: Int!
@@ -492,12 +496,18 @@ reset_expr: String
 verify_token: String
 verify_expr: String
 api_key: String
-user_role(_where: eshop_roles_bool_exp, _groupBy: [eshop_roles_enum], _orderBy: eshop_roles_order_by_exp, _distinct: [eshop_roles_enum], _limit: Int, _offset: Int):eshop_roles
 member_role(_where: ianos_roles_bool_exp, _groupBy: [ianos_roles_enum], _orderBy: ianos_roles_order_by_exp, _distinct: [ianos_roles_enum], _limit: Int, _offset: Int):ianos_roles
-test_role(_where: test_role_bool_exp, _groupBy: [test_role_enum], _orderBy: test_role_order_by_exp, _distinct: [test_role_enum], _limit: Int, _offset: Int):test_role
-user_role_aggregate(_where: eshop_roles_bool_exp, _orderBy: eshop_roles_order_by_exp, _groupBy: [eshop_roles_enum], _distinct: [eshop_roles_enum]): eshop_roles_aggregate
 member_role_aggregate(_where: ianos_roles_bool_exp, _orderBy: ianos_roles_order_by_exp, _groupBy: [ianos_roles_enum], _distinct: [ianos_roles_enum]): ianos_roles_aggregate
-test_role_aggregate(_where: test_role_bool_exp, _orderBy: test_role_order_by_exp, _groupBy: [test_role_enum], _distinct: [test_role_enum]): test_role_aggregate
+}
+type new_schema_roles {
+id: Int!
+name: String!
+}
+type new_schema_users {
+id: String!
+email: String!
+password: String!
+role_id: Int!
 }
 type shop_members {
 name: String!
@@ -511,9 +521,7 @@ password: String!
 created_at: String!
 member_shops(_where: shop_shop_to_member_bool_exp, _groupBy: [shop_shop_to_member_enum], _orderBy: shop_shop_to_member_order_by_exp, _distinct: [shop_shop_to_member_enum], _limit: Int, _offset: Int):shop_shop_to_member
 role(_where: shop_roles_bool_exp, _groupBy: [shop_roles_enum], _orderBy: shop_roles_order_by_exp, _distinct: [shop_roles_enum], _limit: Int, _offset: Int):shop_roles
-member_country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
 role_aggregate(_where: shop_roles_bool_exp, _orderBy: shop_roles_order_by_exp, _groupBy: [shop_roles_enum], _distinct: [shop_roles_enum]): shop_roles_aggregate
-member_country_aggregate(_where: eshop_countries_bool_exp, _orderBy: eshop_countries_order_by_exp, _groupBy: [eshop_countries_enum], _distinct: [eshop_countries_enum]): eshop_countries_aggregate
 member_shops_aggregate(_where: shop_shop_to_member_bool_exp, _orderBy: shop_shop_to_member_order_by_exp, _groupBy: [shop_shop_to_member_enum], _distinct: [shop_shop_to_member_enum]): shop_shop_to_member_aggregate
 }
 type shop_menu_category {
@@ -548,22 +556,6 @@ created_at: String!
 status: String!
 products: Object!
 shop_id: Int!
-shipping_status(_where: eshop_shipping_statuses_bool_exp, _groupBy: [eshop_shipping_statuses_enum], _orderBy: eshop_shipping_statuses_order_by_exp, _distinct: [eshop_shipping_statuses_enum], _limit: Int, _offset: Int):eshop_shipping_statuses
-payment_method(_where: eshop_payment_methods_bool_exp, _groupBy: [eshop_payment_methods_enum], _orderBy: eshop_payment_methods_order_by_exp, _distinct: [eshop_payment_methods_enum], _limit: Int, _offset: Int):eshop_payment_methods
-payment_status(_where: eshop_payment_statuses_bool_exp, _groupBy: [eshop_payment_statuses_enum], _orderBy: eshop_payment_statuses_order_by_exp, _distinct: [eshop_payment_statuses_enum], _limit: Int, _offset: Int):eshop_payment_statuses
-order_products(_where: eshop_order_products_bool_exp, _groupBy: [eshop_order_products_enum], _orderBy: eshop_order_products_order_by_exp, _distinct: [eshop_order_products_enum], _limit: Int, _offset: Int):eshop_order_products
-order_user(_where: eshop_members_bool_exp, _groupBy: [eshop_members_enum], _orderBy: eshop_members_order_by_exp, _distinct: [eshop_members_enum], _limit: Int, _offset: Int):eshop_members
-shipping_country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
-country(_where: eshop_countries_bool_exp, _groupBy: [eshop_countries_enum], _orderBy: eshop_countries_order_by_exp, _distinct: [eshop_countries_enum], _limit: Int, _offset: Int):eshop_countries
-shipping_company(_where: eshop_shipping_companies_bool_exp, _groupBy: [eshop_shipping_companies_enum], _orderBy: eshop_shipping_companies_order_by_exp, _distinct: [eshop_shipping_companies_enum], _limit: Int, _offset: Int):eshop_shipping_companies
-order_products_aggregate(_where: eshop_order_products_bool_exp, _orderBy: eshop_order_products_order_by_exp, _groupBy: [eshop_order_products_enum], _distinct: [eshop_order_products_enum]): eshop_order_products_aggregate
-order_user_aggregate(_where: eshop_members_bool_exp, _orderBy: eshop_members_order_by_exp, _groupBy: [eshop_members_enum], _distinct: [eshop_members_enum]): eshop_members_aggregate
-shipping_country_aggregate(_where: eshop_countries_bool_exp, _orderBy: eshop_countries_order_by_exp, _groupBy: [eshop_countries_enum], _distinct: [eshop_countries_enum]): eshop_countries_aggregate
-country_aggregate(_where: eshop_countries_bool_exp, _orderBy: eshop_countries_order_by_exp, _groupBy: [eshop_countries_enum], _distinct: [eshop_countries_enum]): eshop_countries_aggregate
-shipping_company_aggregate(_where: eshop_shipping_companies_bool_exp, _orderBy: eshop_shipping_companies_order_by_exp, _groupBy: [eshop_shipping_companies_enum], _distinct: [eshop_shipping_companies_enum]): eshop_shipping_companies_aggregate
-shipping_status_aggregate(_where: eshop_shipping_statuses_bool_exp, _orderBy: eshop_shipping_statuses_order_by_exp, _groupBy: [eshop_shipping_statuses_enum], _distinct: [eshop_shipping_statuses_enum]): eshop_shipping_statuses_aggregate
-payment_method_aggregate(_where: eshop_payment_methods_bool_exp, _orderBy: eshop_payment_methods_order_by_exp, _groupBy: [eshop_payment_methods_enum], _distinct: [eshop_payment_methods_enum]): eshop_payment_methods_aggregate
-payment_status_aggregate(_where: eshop_payment_statuses_bool_exp, _orderBy: eshop_payment_statuses_order_by_exp, _groupBy: [eshop_payment_statuses_enum], _distinct: [eshop_payment_statuses_enum]): eshop_payment_statuses_aggregate
 }
 type shop_roles {
 id: Int!
@@ -593,8 +585,8 @@ member_id: Int!
 shop_id: Int!
 shop(_where: shop_shops_bool_exp, _groupBy: [shop_shops_enum], _orderBy: shop_shops_order_by_exp, _distinct: [shop_shops_enum], _limit: Int, _offset: Int):shop_shops
 member(_where: shop_members_bool_exp, _groupBy: [shop_members_enum], _orderBy: shop_members_order_by_exp, _distinct: [shop_members_enum], _limit: Int, _offset: Int):shop_members
-member_aggregate(_where: shop_members_bool_exp, _orderBy: shop_members_order_by_exp, _groupBy: [shop_members_enum], _distinct: [shop_members_enum]): shop_members_aggregate
 shop_aggregate(_where: shop_shops_bool_exp, _orderBy: shop_shops_order_by_exp, _groupBy: [shop_shops_enum], _distinct: [shop_shops_enum]): shop_shops_aggregate
+member_aggregate(_where: shop_members_bool_exp, _orderBy: shop_members_order_by_exp, _groupBy: [shop_members_enum], _distinct: [shop_members_enum]): shop_members_aggregate
 }
 type shop_shops {
 id: Int!
@@ -603,9 +595,9 @@ details: Object!
 created_at: String!
 name: String!
 image: String
-shop_members(_where: shop_shop_to_member_bool_exp, _groupBy: [shop_shop_to_member_enum], _orderBy: shop_shop_to_member_order_by_exp, _distinct: [shop_shop_to_member_enum], _limit: Int, _offset: Int):shop_shop_to_member
 shop_categories(_where: shop_shop_to_category_bool_exp, _groupBy: [shop_shop_to_category_enum], _orderBy: shop_shop_to_category_order_by_exp, _distinct: [shop_shop_to_category_enum], _limit: Int, _offset: Int):shop_shop_to_category
 shop_menu(_where: shop_shop_menu_bool_exp, _groupBy: [shop_shop_menu_enum], _orderBy: shop_shop_menu_order_by_exp, _distinct: [shop_shop_menu_enum], _limit: Int, _offset: Int):shop_shop_menu
+shop_members(_where: shop_shop_to_member_bool_exp, _groupBy: [shop_shop_to_member_enum], _orderBy: shop_shop_to_member_order_by_exp, _distinct: [shop_shop_to_member_enum], _limit: Int, _offset: Int):shop_shop_to_member
 shop_members_aggregate(_where: shop_shop_to_member_bool_exp, _orderBy: shop_shop_to_member_order_by_exp, _groupBy: [shop_shop_to_member_enum], _distinct: [shop_shop_to_member_enum]): shop_shop_to_member_aggregate
 shop_categories_aggregate(_where: shop_shop_to_category_bool_exp, _orderBy: shop_shop_to_category_order_by_exp, _groupBy: [shop_shop_to_category_enum], _distinct: [shop_shop_to_category_enum]): shop_shop_to_category_aggregate
 shop_menu_aggregate(_where: shop_shop_menu_bool_exp, _orderBy: shop_shop_menu_order_by_exp, _groupBy: [shop_shop_menu_enum], _distinct: [shop_shop_menu_enum]): shop_shop_menu_aggregate
@@ -616,12 +608,6 @@ name: String!
 last_name: String!
 email: String!
 password: String!
-user_role(_where: eshop_roles_bool_exp, _groupBy: [eshop_roles_enum], _orderBy: eshop_roles_order_by_exp, _distinct: [eshop_roles_enum], _limit: Int, _offset: Int):eshop_roles
-member_role(_where: ianos_roles_bool_exp, _groupBy: [ianos_roles_enum], _orderBy: ianos_roles_order_by_exp, _distinct: [ianos_roles_enum], _limit: Int, _offset: Int):ianos_roles
-test_role(_where: test_role_bool_exp, _groupBy: [test_role_enum], _orderBy: test_role_order_by_exp, _distinct: [test_role_enum], _limit: Int, _offset: Int):test_role
-user_role_aggregate(_where: eshop_roles_bool_exp, _orderBy: eshop_roles_order_by_exp, _groupBy: [eshop_roles_enum], _distinct: [eshop_roles_enum]): eshop_roles_aggregate
-member_role_aggregate(_where: ianos_roles_bool_exp, _orderBy: ianos_roles_order_by_exp, _groupBy: [ianos_roles_enum], _distinct: [ianos_roles_enum]): ianos_roles_aggregate
-test_role_aggregate(_where: test_role_bool_exp, _orderBy: test_role_order_by_exp, _groupBy: [test_role_enum], _distinct: [test_role_enum]): test_role_aggregate
 }
 type test_role {
 id: Int!
@@ -636,12 +622,63 @@ email: String!
 role_id: Int!
 price: Int!
 password: String
-user_role(_where: eshop_roles_bool_exp, _groupBy: [eshop_roles_enum], _orderBy: eshop_roles_order_by_exp, _distinct: [eshop_roles_enum], _limit: Int, _offset: Int):eshop_roles
 test_role(_where: test_role_bool_exp, _groupBy: [test_role_enum], _orderBy: test_role_order_by_exp, _distinct: [test_role_enum], _limit: Int, _offset: Int):test_role
-member_role(_where: ianos_roles_bool_exp, _groupBy: [ianos_roles_enum], _orderBy: ianos_roles_order_by_exp, _distinct: [ianos_roles_enum], _limit: Int, _offset: Int):ianos_roles
-user_role_aggregate(_where: eshop_roles_bool_exp, _orderBy: eshop_roles_order_by_exp, _groupBy: [eshop_roles_enum], _distinct: [eshop_roles_enum]): eshop_roles_aggregate
 test_role_aggregate(_where: test_role_bool_exp, _orderBy: test_role_order_by_exp, _groupBy: [test_role_enum], _distinct: [test_role_enum]): test_role_aggregate
-member_role_aggregate(_where: ianos_roles_bool_exp, _orderBy: ianos_roles_order_by_exp, _groupBy: [ianos_roles_enum], _distinct: [ianos_roles_enum]): ianos_roles_aggregate
+}
+type bi_companies_aggregate {
+min: bi_companies_aggregate_min
+max: bi_companies_aggregate_max
+sum: bi_companies_aggregate_sum
+avg: bi_companies_aggregate_avg
+count: Int
+}
+type bi_companies_aggregate_min {
+id: Int
+name: String
+domain: String
+year_founded: Float
+industry: String
+locality: String
+country: String
+linked_in_url: String
+current_employee_estimate: Float
+total_employee_estimate: Float
+}
+type bi_companies_aggregate_max {
+id: Int
+name: String
+domain: String
+year_founded: Float
+industry: String
+locality: String
+country: String
+linked_in_url: String
+current_employee_estimate: Float
+total_employee_estimate: Float
+}
+type bi_companies_aggregate_sum {
+id: Int
+name: String
+domain: String
+year_founded: Float
+industry: String
+locality: String
+country: String
+linked_in_url: String
+current_employee_estimate: Float
+total_employee_estimate: Float
+}
+type bi_companies_aggregate_avg {
+id: Int
+name: String
+domain: String
+year_founded: Float
+industry: String
+locality: String
+country: String
+linked_in_url: String
+current_employee_estimate: Float
+total_employee_estimate: Float
 }
 type eshop_attribute_categories_aggregate {
 min: eshop_attribute_categories_aggregate_min
@@ -2061,6 +2098,60 @@ verify_token: String
 verify_expr: Float
 api_key: String
 }
+type new_schema_roles_aggregate {
+min: new_schema_roles_aggregate_min
+max: new_schema_roles_aggregate_max
+sum: new_schema_roles_aggregate_sum
+avg: new_schema_roles_aggregate_avg
+count: Int
+}
+type new_schema_roles_aggregate_min {
+id: Int
+name: String
+}
+type new_schema_roles_aggregate_max {
+id: Int
+name: String
+}
+type new_schema_roles_aggregate_sum {
+id: Int
+name: String
+}
+type new_schema_roles_aggregate_avg {
+id: Int
+name: String
+}
+type new_schema_users_aggregate {
+min: new_schema_users_aggregate_min
+max: new_schema_users_aggregate_max
+sum: new_schema_users_aggregate_sum
+avg: new_schema_users_aggregate_avg
+count: Int
+}
+type new_schema_users_aggregate_min {
+id: Float
+email: String
+password: String
+role_id: Int
+}
+type new_schema_users_aggregate_max {
+id: Float
+email: String
+password: String
+role_id: Int
+}
+type new_schema_users_aggregate_sum {
+id: Float
+email: String
+password: String
+role_id: Int
+}
+type new_schema_users_aggregate_avg {
+id: Float
+email: String
+password: String
+role_id: Int
+}
 type shop_members_aggregate {
 min: shop_members_aggregate_min
 max: shop_members_aggregate_max
@@ -2512,18 +2603,31 @@ role_id: Int
 price: Int
 password: String
 }
+enum bi_companies_enum {
+linked_in_url
+current_employee_estimate
+id
+domain
+year_founded
+industry
+locality
+name
+country
+total_employee_estimate
+}
 enum eshop_attribute_categories_enum {
+id
 name
 grid_order
-id
 }
 enum eshop_attributes_enum {
-grid_order
-id
 category_id
 name
+grid_order
+id
 }
 enum eshop_categories_enum {
+enabled
 created_at
 image
 meta
@@ -2531,7 +2635,6 @@ name
 grid_order
 id
 supercategory_id
-enabled
 }
 enum eshop_countries_enum {
 id
@@ -2539,10 +2642,10 @@ name
 code
 }
 enum eshop_currencies_enum {
-id
 name
 meta
 enabled
+id
 }
 enum eshop_favorites_enum {
 id
@@ -2551,82 +2654,82 @@ product_id
 created_at
 }
 enum eshop_inventory_enum {
-id
 product_id
 quantity
+id
 }
 enum eshop_members_enum {
-company_address
 vat
-email
+id
+last_name
 country_id
 city
-postal_code
-phone
-company_name
-id
-name
-last_name
-password
 address
+phone
+name
+email
+password
+postal_code
+company_name
+company_address
 }
 enum eshop_newsletter_enum {
+id
 email
 name
 last_name
 created_at
-id
 }
 enum eshop_order_products_enum {
-name
-product_name
+shipping_status_id
+original_price
 discount_price
 product_id
 order_id
+payment_status_id
 quantity
 meta
-payment_status_id
-shipping_status_id
-original_price
+name
+product_name
 }
 enum eshop_orders_enum {
-order_info
-address
-id
+shipping_status_id
+email
 name
-phone
-shipping_country_id
+postal_code
+shipping_phone
+company_name
+company_address
+payment_method_id
+shipping_company_id
+admin_info
+delivered_at
 vat
-external_id
-shipping_postal_code
-shipping_last_name
-city
+address
+order_info
 sent_at
 shipping_address
-shipping_phone
-shipping_name
-payment_status_id
-admin_info
-company_address
-created_at
+shipping_last_name
+returned_at
+last_name
 shipped_at
-payment_method_id
-email
-postal_code
-invoice
+country_id
+shipping_postal_code
 user_id
 tracking_number
-returned_at
-shipping_company_id
-company_name
-shipping_status_id
-total
-coupon
-last_name
-delivered_at
-country_id
 shipping_city
+shipping_name
 shipping_email
+created_at
+payment_status_id
+external_id
+invoice
+id
+coupon
+phone
+city
+shipping_country_id
+total
 }
 enum eshop_payment_methods_enum {
 enabled
@@ -2645,25 +2748,25 @@ product_id
 attribute_id
 }
 enum eshop_product_comments_enum {
+parent_id
+id
 comment
 created_at
 user_id
 product_id
-parent_id
-id
 }
 enum eshop_product_prices_enum {
-product_variant_id
 currency_id
 price
 id
+product_variant_id
 }
 enum eshop_product_ratings_enum {
-rating
 created_at
 user_id
 product_id
 id
+rating
 }
 enum eshop_product_sizes_enum {
 id
@@ -2674,28 +2777,28 @@ product_id
 tag_id
 }
 enum eshop_product_variants_enum {
+quantity
 id
 product_id
 variant_id
-quantity
 }
 enum eshop_products_enum {
-created_at
-price
-sku
-product_name
-weight
-length
 category_id
-meta
-quantity
-description
-id
-enabled
-name
-status
-height
+weight
 width
+price
+enabled
+quantity
+product_name
+height
+length
+id
+meta
+name
+description
+sku
+created_at
+status
 }
 enum eshop_roles_enum {
 id
@@ -2704,13 +2807,13 @@ permissions
 created_at
 }
 enum eshop_shipping_companies_enum {
+name
+enabled
+shipping_cost
 image
 meta
 grid_order
 id
-name
-enabled
-shipping_cost
 }
 enum eshop_shipping_company_to_website_enum {
 id
@@ -2723,34 +2826,34 @@ name
 created_at
 }
 enum eshop_supercategories_enum {
+name
+image
+grid_order
 id
 enabled
 created_at
 meta
-name
-image
-grid_order
 }
 enum eshop_supercategory_to_website_enum {
 website_id
 supercategory_id
 }
 enum eshop_tags_enum {
+name
 enabled
 grid_order
 id
 created_at
 max_products
-name
 }
 enum eshop_users_enum {
+role_id
 id
 email
 name
 last_name
 password
 created_at
-role_id
 }
 enum eshop_variants_enum {
 id
@@ -2762,25 +2865,25 @@ id
 domain
 }
 enum ianos_investments_enum {
-country
-image
-company
-enabled
-id
-title
-logo
-deadline
-locked
-investment_id
-description
-city
-created_on
-goal
-minimum
 tags
+enabled
+investment_id
+title
+country
+minimum
+redirect_to
 owner
 category
-redirect_to
+logo
+goal
+deadline
+locked
+id
+city
+description
+created_on
+image
+company
 }
 enum ianos_roles_enum {
 id
@@ -2789,55 +2892,65 @@ title
 level
 }
 enum ianos_users_enum {
-verified
-enabled
-email
 password
 public_id
 last_login
-role
-created_on
-verify_token
 verify_expr
-api_key
 id
+role
 approved
+verify_token
+name
+created_on
+email
+verified
+enabled
 reset_token
 reset_expr
-name
+api_key
 image
 }
-enum shop_members_enum {
-last_name
+enum new_schema_roles_enum {
+id
+name
+}
+enum new_schema_users_enum {
+id
 email
-active
+password
+role_id
+}
+enum shop_members_enum {
 created_at
 name
+last_name
 role_id
-verified
+active
 id
+email
+verified
 password
 }
 enum shop_menu_category_enum {
+created_at
+description
 thumbnail
 active
 order_pos
 id
 name
 menu_id
-created_at
-description
 }
 enum shop_menu_item_enum {
 id
-name
 description
-order_pos
-thumbnail
-created_at
 price
 menu_category_id
 active
+order_pos
+name
+thumbnail
+created_at
 }
 enum shop_orders_enum {
 created_at
@@ -2848,10 +2961,10 @@ id
 user_id
 }
 enum shop_roles_enum {
-created_at
 id
 name
 permissions
+created_at
 }
 enum shop_shop_categories_enum {
 id
@@ -2867,35 +2980,61 @@ shop_id
 category_id
 }
 enum shop_shop_to_member_enum {
-member_id
 shop_id
+member_id
 }
 enum shop_shops_enum {
-image
-id
 geo
 details
 created_at
 name
+image
+id
 }
 enum shop_users_enum {
-email
-password
 id
 name
 last_name
+email
+password
 }
 enum test_role_enum {
+test
 id
 name
-test
 }
 enum test_users_enum {
+id
 email
 role_id
 price
 password
-id
+}
+input bi_companies_bool_exp {
+id: column_input
+domain: column_input
+year_founded: column_input
+industry: column_input
+locality: column_input
+linked_in_url: column_input
+current_employee_estimate: column_input
+name: column_input
+country: column_input
+total_employee_estimate: column_input
+_and: [bi_companies_bool_exp!]
+_or: [bi_companies_bool_exp!]
+}
+input bi_companies_order_by_exp {
+linked_in_url: order_by_direction_enum
+current_employee_estimate: order_by_direction_enum
+id: order_by_direction_enum
+domain: order_by_direction_enum
+year_founded: order_by_direction_enum
+industry: order_by_direction_enum
+locality: order_by_direction_enum
+name: order_by_direction_enum
+country: order_by_direction_enum
+total_employee_estimate: order_by_direction_enum
 }
 input eshop_attribute_categories_bool_exp {
 id: column_input
@@ -2920,34 +3059,34 @@ _and: [eshop_attributes_bool_exp!]
 _or: [eshop_attributes_bool_exp!]
 }
 input eshop_attributes_order_by_exp {
-id: order_by_direction_enum
-category_id: order_by_direction_enum
 name: order_by_direction_enum
 grid_order: order_by_direction_enum
+id: order_by_direction_enum
+category_id: order_by_direction_enum
 }
 input eshop_categories_bool_exp {
+enabled: column_input
+created_at: column_input
+image: column_input
 meta: column_input
 name: column_input
 grid_order: column_input
 id: column_input
 supercategory_id: column_input
-enabled: column_input
-created_at: column_input
-image: column_input
 supercategory_parent: eshop_supercategories_bool_exp
 category_products: eshop_products_bool_exp
 _and: [eshop_categories_bool_exp!]
 _or: [eshop_categories_bool_exp!]
 }
 input eshop_categories_order_by_exp {
-enabled: order_by_direction_enum
-created_at: order_by_direction_enum
 image: order_by_direction_enum
 meta: order_by_direction_enum
 name: order_by_direction_enum
 grid_order: order_by_direction_enum
 id: order_by_direction_enum
 supercategory_id: order_by_direction_enum
+enabled: order_by_direction_enum
+created_at: order_by_direction_enum
 }
 input eshop_countries_bool_exp {
 id: column_input
@@ -2962,10 +3101,10 @@ name: order_by_direction_enum
 code: order_by_direction_enum
 }
 input eshop_currencies_bool_exp {
+enabled: column_input
 id: column_input
 name: column_input
 meta: column_input
-enabled: column_input
 _and: [eshop_currencies_bool_exp!]
 _or: [eshop_currencies_bool_exp!]
 }
@@ -2976,10 +3115,10 @@ meta: order_by_direction_enum
 enabled: order_by_direction_enum
 }
 input eshop_favorites_bool_exp {
-created_at: column_input
 id: column_input
 user_id: column_input
 product_id: column_input
+created_at: column_input
 favorite_to_member: eshop_members_bool_exp
 favorite_product: eshop_products_bool_exp
 favorite_member_products: eshop_products_bool_exp
@@ -2987,10 +3126,10 @@ _and: [eshop_favorites_bool_exp!]
 _or: [eshop_favorites_bool_exp!]
 }
 input eshop_favorites_order_by_exp {
+id: order_by_direction_enum
 user_id: order_by_direction_enum
 product_id: order_by_direction_enum
 created_at: order_by_direction_enum
-id: order_by_direction_enum
 }
 input eshop_inventory_bool_exp {
 product_id: column_input
@@ -3000,44 +3139,42 @@ _and: [eshop_inventory_bool_exp!]
 _or: [eshop_inventory_bool_exp!]
 }
 input eshop_inventory_order_by_exp {
+quantity: order_by_direction_enum
 id: order_by_direction_enum
 product_id: order_by_direction_enum
-quantity: order_by_direction_enum
 }
 input eshop_members_bool_exp {
-company_name: column_input
-company_address: column_input
 vat: column_input
-email: column_input
+id: column_input
+last_name: column_input
 country_id: column_input
 city: column_input
-postal_code: column_input
-phone: column_input
-id: column_input
-name: column_input
-last_name: column_input
-password: column_input
 address: column_input
-member_shops: shop_shop_to_member_bool_exp
-role: shop_roles_bool_exp
+phone: column_input
+name: column_input
+email: column_input
+password: column_input
+postal_code: column_input
+company_name: column_input
+company_address: column_input
 member_country: eshop_countries_bool_exp
 _and: [eshop_members_bool_exp!]
 _or: [eshop_members_bool_exp!]
 }
 input eshop_members_order_by_exp {
-company_address: order_by_direction_enum
-vat: order_by_direction_enum
-email: order_by_direction_enum
-country_id: order_by_direction_enum
-city: order_by_direction_enum
 postal_code: order_by_direction_enum
-phone: order_by_direction_enum
 company_name: order_by_direction_enum
-id: order_by_direction_enum
+company_address: order_by_direction_enum
 name: order_by_direction_enum
-last_name: order_by_direction_enum
+email: order_by_direction_enum
 password: order_by_direction_enum
+city: order_by_direction_enum
 address: order_by_direction_enum
+phone: order_by_direction_enum
+vat: order_by_direction_enum
+id: order_by_direction_enum
+last_name: order_by_direction_enum
+country_id: order_by_direction_enum
 }
 input eshop_newsletter_bool_exp {
 id: column_input
@@ -3056,124 +3193,124 @@ created_at: order_by_direction_enum
 id: order_by_direction_enum
 }
 input eshop_order_products_bool_exp {
+shipping_status_id: column_input
+original_price: column_input
 discount_price: column_input
 product_id: column_input
 order_id: column_input
+payment_status_id: column_input
 quantity: column_input
 meta: column_input
 name: column_input
 product_name: column_input
-payment_status_id: column_input
-shipping_status_id: column_input
-original_price: column_input
-product_by_order: eshop_products_bool_exp
 orders_by_product: eshop_orders_bool_exp
 products_by_order: eshop_products_bool_exp
 order: eshop_orders_bool_exp
 product_shipping_status: eshop_shipping_statuses_bool_exp
 product_payment_status: eshop_payment_statuses_bool_exp
+product_by_order: eshop_products_bool_exp
 _and: [eshop_order_products_bool_exp!]
 _or: [eshop_order_products_bool_exp!]
 }
 input eshop_order_products_order_by_exp {
+shipping_status_id: order_by_direction_enum
+original_price: order_by_direction_enum
+product_name: order_by_direction_enum
+discount_price: order_by_direction_enum
 product_id: order_by_direction_enum
 order_id: order_by_direction_enum
+payment_status_id: order_by_direction_enum
 quantity: order_by_direction_enum
 meta: order_by_direction_enum
 name: order_by_direction_enum
-product_name: order_by_direction_enum
-discount_price: order_by_direction_enum
-payment_status_id: order_by_direction_enum
-shipping_status_id: order_by_direction_enum
-original_price: order_by_direction_enum
 }
 input eshop_orders_bool_exp {
-city: column_input
+email: column_input
+name: column_input
+postal_code: column_input
+shipping_phone: column_input
+company_name: column_input
+company_address: column_input
+payment_method_id: column_input
+shipping_status_id: column_input
+shipping_company_id: column_input
+delivered_at: column_input
+vat: column_input
+address: column_input
+admin_info: column_input
 sent_at: column_input
 shipping_address: column_input
-shipping_phone: column_input
-shipping_name: column_input
-payment_status_id: column_input
-admin_info: column_input
-company_address: column_input
-created_at: column_input
-shipped_at: column_input
-payment_method_id: column_input
-email: column_input
-postal_code: column_input
-invoice: column_input
-user_id: column_input
-tracking_number: column_input
+shipping_last_name: column_input
 returned_at: column_input
-shipping_company_id: column_input
+last_name: column_input
+order_info: column_input
 country_id: column_input
+shipped_at: column_input
+user_id: column_input
+shipping_postal_code: column_input
 shipping_city: column_input
-company_name: column_input
-shipping_status_id: column_input
+shipping_name: column_input
+shipping_email: column_input
+created_at: column_input
+payment_status_id: column_input
+tracking_number: column_input
+invoice: column_input
+id: column_input
+external_id: column_input
+phone: column_input
+city: column_input
+shipping_country_id: column_input
 total: column_input
 coupon: column_input
-last_name: column_input
-delivered_at: column_input
-shipping_email: column_input
-order_info: column_input
-address: column_input
-id: column_input
-name: column_input
-phone: column_input
-shipping_country_id: column_input
-vat: column_input
-external_id: column_input
-shipping_postal_code: column_input
-shipping_last_name: column_input
-order_user: eshop_members_bool_exp
-shipping_country: eshop_countries_bool_exp
-country: eshop_countries_bool_exp
 shipping_company: eshop_shipping_companies_bool_exp
 shipping_status: eshop_shipping_statuses_bool_exp
 payment_method: eshop_payment_methods_bool_exp
 payment_status: eshop_payment_statuses_bool_exp
 order_products: eshop_order_products_bool_exp
+order_user: eshop_members_bool_exp
+shipping_country: eshop_countries_bool_exp
+country: eshop_countries_bool_exp
 _and: [eshop_orders_bool_exp!]
 _or: [eshop_orders_bool_exp!]
 }
 input eshop_orders_order_by_exp {
-postal_code: order_by_direction_enum
-invoice: order_by_direction_enum
-payment_method_id: order_by_direction_enum
-email: order_by_direction_enum
-returned_at: order_by_direction_enum
-shipping_company_id: order_by_direction_enum
-user_id: order_by_direction_enum
-tracking_number: order_by_direction_enum
-coupon: order_by_direction_enum
-last_name: order_by_direction_enum
-delivered_at: order_by_direction_enum
-country_id: order_by_direction_enum
-shipping_city: order_by_direction_enum
-company_name: order_by_direction_enum
-shipping_status_id: order_by_direction_enum
-total: order_by_direction_enum
-shipping_email: order_by_direction_enum
-order_info: order_by_direction_enum
 address: order_by_direction_enum
-phone: order_by_direction_enum
-shipping_country_id: order_by_direction_enum
-vat: order_by_direction_enum
-id: order_by_direction_enum
-name: order_by_direction_enum
-shipping_last_name: order_by_direction_enum
-external_id: order_by_direction_enum
-shipping_postal_code: order_by_direction_enum
-shipping_address: order_by_direction_enum
-shipping_phone: order_by_direction_enum
-shipping_name: order_by_direction_enum
-city: order_by_direction_enum
-sent_at: order_by_direction_enum
-company_address: order_by_direction_enum
-created_at: order_by_direction_enum
-shipped_at: order_by_direction_enum
-payment_status_id: order_by_direction_enum
 admin_info: order_by_direction_enum
+delivered_at: order_by_direction_enum
+vat: order_by_direction_enum
+shipping_last_name: order_by_direction_enum
+returned_at: order_by_direction_enum
+last_name: order_by_direction_enum
+order_info: order_by_direction_enum
+sent_at: order_by_direction_enum
+shipping_address: order_by_direction_enum
+country_id: order_by_direction_enum
+shipped_at: order_by_direction_enum
+user_id: order_by_direction_enum
+shipping_postal_code: order_by_direction_enum
+shipping_email: order_by_direction_enum
+created_at: order_by_direction_enum
+payment_status_id: order_by_direction_enum
+tracking_number: order_by_direction_enum
+shipping_city: order_by_direction_enum
+shipping_name: order_by_direction_enum
+id: order_by_direction_enum
+external_id: order_by_direction_enum
+invoice: order_by_direction_enum
+shipping_country_id: order_by_direction_enum
+total: order_by_direction_enum
+coupon: order_by_direction_enum
+phone: order_by_direction_enum
+city: order_by_direction_enum
+postal_code: order_by_direction_enum
+shipping_phone: order_by_direction_enum
+company_name: order_by_direction_enum
+company_address: order_by_direction_enum
+payment_method_id: order_by_direction_enum
+shipping_status_id: order_by_direction_enum
+email: order_by_direction_enum
+name: order_by_direction_enum
+shipping_company_id: order_by_direction_enum
 }
 input eshop_payment_methods_bool_exp {
 id: column_input
@@ -3190,9 +3327,9 @@ created_at: order_by_direction_enum
 enabled: order_by_direction_enum
 }
 input eshop_payment_statuses_bool_exp {
+created_at: column_input
 id: column_input
 name: column_input
-created_at: column_input
 _and: [eshop_payment_statuses_bool_exp!]
 _or: [eshop_payment_statuses_bool_exp!]
 }
@@ -3223,9 +3360,9 @@ created_at: column_input
 user_id: column_input
 product_id: column_input
 parent_id: column_input
-replies: eshop_product_comments_bool_exp
 product_by_comment: eshop_products_bool_exp
 author: eshop_members_bool_exp
+replies: eshop_product_comments_bool_exp
 _and: [eshop_product_comments_bool_exp!]
 _or: [eshop_product_comments_bool_exp!]
 }
@@ -3238,10 +3375,10 @@ product_id: order_by_direction_enum
 parent_id: order_by_direction_enum
 }
 input eshop_product_prices_bool_exp {
-currency_id: column_input
-price: column_input
 id: column_input
 product_variant_id: column_input
+currency_id: column_input
+price: column_input
 _and: [eshop_product_prices_bool_exp!]
 _or: [eshop_product_prices_bool_exp!]
 }
@@ -3252,20 +3389,20 @@ currency_id: order_by_direction_enum
 price: order_by_direction_enum
 }
 input eshop_product_ratings_bool_exp {
+product_id: column_input
+id: column_input
 rating: column_input
 created_at: column_input
 user_id: column_input
-product_id: column_input
-id: column_input
 _and: [eshop_product_ratings_bool_exp!]
 _or: [eshop_product_ratings_bool_exp!]
 }
 input eshop_product_ratings_order_by_exp {
+created_at: order_by_direction_enum
 user_id: order_by_direction_enum
 product_id: order_by_direction_enum
 id: order_by_direction_enum
 rating: order_by_direction_enum
-created_at: order_by_direction_enum
 }
 input eshop_product_sizes_bool_exp {
 id: column_input
@@ -3274,8 +3411,8 @@ _and: [eshop_product_sizes_bool_exp!]
 _or: [eshop_product_sizes_bool_exp!]
 }
 input eshop_product_sizes_order_by_exp {
-name: order_by_direction_enum
 id: order_by_direction_enum
+name: order_by_direction_enum
 }
 input eshop_product_to_tag_bool_exp {
 product_id: column_input
@@ -3291,68 +3428,68 @@ product_id: order_by_direction_enum
 tag_id: order_by_direction_enum
 }
 input eshop_product_variants_bool_exp {
-id: column_input
-product_id: column_input
 variant_id: column_input
 quantity: column_input
+id: column_input
+product_id: column_input
 variant: eshop_variants_bool_exp
 _and: [eshop_product_variants_bool_exp!]
 _or: [eshop_product_variants_bool_exp!]
 }
 input eshop_product_variants_order_by_exp {
-quantity: order_by_direction_enum
 id: order_by_direction_enum
 product_id: order_by_direction_enum
 variant_id: order_by_direction_enum
+quantity: order_by_direction_enum
 }
 input eshop_products_bool_exp {
-name: column_input
-description: column_input
-id: column_input
-enabled: column_input
-width: column_input
-status: column_input
-height: column_input
-sku: column_input
-created_at: column_input
 price: column_input
+enabled: column_input
 quantity: column_input
 product_name: column_input
-weight: column_input
-length: column_input
-category_id: column_input
+height: column_input
+width: column_input
+id: column_input
 meta: column_input
-category: eshop_categories_bool_exp
+name: column_input
+description: column_input
+sku: column_input
+length: column_input
+created_at: column_input
+status: column_input
+category_id: column_input
+weight: column_input
 product_tags: eshop_product_to_tag_bool_exp
 product_ratings: eshop_product_ratings_bool_exp
 product_variants: eshop_product_variants_bool_exp
 product_attributes: eshop_product_attributes_bool_exp
+category: eshop_categories_bool_exp
 _and: [eshop_products_bool_exp!]
 _or: [eshop_products_bool_exp!]
 }
 input eshop_products_order_by_exp {
-status: order_by_direction_enum
+category_id: order_by_direction_enum
+weight: order_by_direction_enum
+product_name: order_by_direction_enum
 height: order_by_direction_enum
 width: order_by_direction_enum
-created_at: order_by_direction_enum
 price: order_by_direction_enum
+enabled: order_by_direction_enum
+quantity: order_by_direction_enum
+description: order_by_direction_enum
 sku: order_by_direction_enum
 length: order_by_direction_enum
-category_id: order_by_direction_enum
-meta: order_by_direction_enum
-quantity: order_by_direction_enum
-product_name: order_by_direction_enum
-weight: order_by_direction_enum
 id: order_by_direction_enum
-enabled: order_by_direction_enum
+meta: order_by_direction_enum
 name: order_by_direction_enum
-description: order_by_direction_enum
+created_at: order_by_direction_enum
+status: order_by_direction_enum
 }
 input eshop_roles_bool_exp {
-permissions: column_input
 created_at: column_input
 id: column_input
 name: column_input
+permissions: column_input
 _and: [eshop_roles_bool_exp!]
 _or: [eshop_roles_bool_exp!]
 }
@@ -3363,30 +3500,30 @@ permissions: order_by_direction_enum
 created_at: order_by_direction_enum
 }
 input eshop_shipping_companies_bool_exp {
-image: column_input
-meta: column_input
-grid_order: column_input
 id: column_input
 name: column_input
 enabled: column_input
 shipping_cost: column_input
+image: column_input
+meta: column_input
+grid_order: column_input
 shipping_company_websites: eshop_shipping_company_to_website_bool_exp
 _and: [eshop_shipping_companies_bool_exp!]
 _or: [eshop_shipping_companies_bool_exp!]
 }
 input eshop_shipping_companies_order_by_exp {
+meta: order_by_direction_enum
+grid_order: order_by_direction_enum
 id: order_by_direction_enum
 name: order_by_direction_enum
 enabled: order_by_direction_enum
 shipping_cost: order_by_direction_enum
 image: order_by_direction_enum
-meta: order_by_direction_enum
-grid_order: order_by_direction_enum
 }
 input eshop_shipping_company_to_website_bool_exp {
-id: column_input
 shipping_company_id: column_input
 website_id: column_input
+id: column_input
 shipping_company_website: eshop_websites_bool_exp
 _and: [eshop_shipping_company_to_website_bool_exp!]
 _or: [eshop_shipping_company_to_website_bool_exp!]
@@ -3404,35 +3541,35 @@ _and: [eshop_shipping_statuses_bool_exp!]
 _or: [eshop_shipping_statuses_bool_exp!]
 }
 input eshop_shipping_statuses_order_by_exp {
+id: order_by_direction_enum
 name: order_by_direction_enum
 created_at: order_by_direction_enum
-id: order_by_direction_enum
 }
 input eshop_supercategories_bool_exp {
+image: column_input
+grid_order: column_input
+id: column_input
 enabled: column_input
 created_at: column_input
 meta: column_input
 name: column_input
-image: column_input
-grid_order: column_input
-id: column_input
 categories: eshop_categories_bool_exp
 websites: eshop_supercategory_to_website_bool_exp
 _and: [eshop_supercategories_bool_exp!]
 _or: [eshop_supercategories_bool_exp!]
 }
 input eshop_supercategories_order_by_exp {
-created_at: order_by_direction_enum
-meta: order_by_direction_enum
-name: order_by_direction_enum
 image: order_by_direction_enum
 grid_order: order_by_direction_enum
 id: order_by_direction_enum
 enabled: order_by_direction_enum
+created_at: order_by_direction_enum
+meta: order_by_direction_enum
+name: order_by_direction_enum
 }
 input eshop_supercategory_to_website_bool_exp {
-website_id: column_input
 supercategory_id: column_input
+website_id: column_input
 website: eshop_websites_bool_exp
 supercategory: eshop_supercategories_bool_exp
 _and: [eshop_supercategory_to_website_bool_exp!]
@@ -3443,46 +3580,44 @@ website_id: order_by_direction_enum
 supercategory_id: order_by_direction_enum
 }
 input eshop_tags_bool_exp {
-name: column_input
-enabled: column_input
-grid_order: column_input
 id: column_input
 created_at: column_input
 max_products: column_input
+name: column_input
+enabled: column_input
+grid_order: column_input
 tag_to_products: eshop_product_to_tag_bool_exp
 _and: [eshop_tags_bool_exp!]
 _or: [eshop_tags_bool_exp!]
 }
 input eshop_tags_order_by_exp {
+grid_order: order_by_direction_enum
 id: order_by_direction_enum
 created_at: order_by_direction_enum
 max_products: order_by_direction_enum
 name: order_by_direction_enum
 enabled: order_by_direction_enum
-grid_order: order_by_direction_enum
 }
 input eshop_users_bool_exp {
-id: column_input
-email: column_input
 name: column_input
 last_name: column_input
 password: column_input
 created_at: column_input
 role_id: column_input
-member_role: ianos_roles_bool_exp
-test_role: test_role_bool_exp
+id: column_input
+email: column_input
 user_role: eshop_roles_bool_exp
 _and: [eshop_users_bool_exp!]
 _or: [eshop_users_bool_exp!]
 }
 input eshop_users_order_by_exp {
+password: order_by_direction_enum
 created_at: order_by_direction_enum
 role_id: order_by_direction_enum
 id: order_by_direction_enum
 email: order_by_direction_enum
 name: order_by_direction_enum
 last_name: order_by_direction_enum
-password: order_by_direction_enum
 }
 input eshop_variants_bool_exp {
 id: column_input
@@ -3497,8 +3632,8 @@ name: order_by_direction_enum
 meta: order_by_direction_enum
 }
 input eshop_websites_bool_exp {
-domain: column_input
 id: column_input
+domain: column_input
 _and: [eshop_websites_bool_exp!]
 _or: [eshop_websites_bool_exp!]
 }
@@ -3507,48 +3642,48 @@ id: order_by_direction_enum
 domain: order_by_direction_enum
 }
 input ianos_investments_bool_exp {
-investment_id: column_input
-description: column_input
-logo: column_input
+created_on: column_input
 deadline: column_input
 locked: column_input
-tags: column_input
-owner: column_input
-category: column_input
-city: column_input
-created_on: column_input
-goal: column_input
-minimum: column_input
-redirect_to: column_input
 id: column_input
-title: column_input
-country: column_input
+city: column_input
+description: column_input
 image: column_input
 company: column_input
+minimum: column_input
+tags: column_input
 enabled: column_input
+investment_id: column_input
+title: column_input
+country: column_input
+goal: column_input
+redirect_to: column_input
+owner: column_input
+category: column_input
+logo: column_input
 _and: [ianos_investments_bool_exp!]
 _or: [ianos_investments_bool_exp!]
 }
 input ianos_investments_order_by_exp {
-id: order_by_direction_enum
-title: order_by_direction_enum
-country: order_by_direction_enum
-image: order_by_direction_enum
-company: order_by_direction_enum
-enabled: order_by_direction_enum
-investment_id: order_by_direction_enum
-description: order_by_direction_enum
-logo: order_by_direction_enum
 deadline: order_by_direction_enum
 locked: order_by_direction_enum
+id: order_by_direction_enum
+city: order_by_direction_enum
+description: order_by_direction_enum
+created_on: order_by_direction_enum
+image: order_by_direction_enum
+company: order_by_direction_enum
+tags: order_by_direction_enum
+enabled: order_by_direction_enum
+investment_id: order_by_direction_enum
+title: order_by_direction_enum
+country: order_by_direction_enum
+minimum: order_by_direction_enum
+redirect_to: order_by_direction_enum
 owner: order_by_direction_enum
 category: order_by_direction_enum
-city: order_by_direction_enum
-created_on: order_by_direction_enum
+logo: order_by_direction_enum
 goal: order_by_direction_enum
-minimum: order_by_direction_enum
-tags: order_by_direction_enum
-redirect_to: order_by_direction_enum
 }
 input ianos_roles_bool_exp {
 id: column_input
@@ -3559,128 +3694,149 @@ _and: [ianos_roles_bool_exp!]
 _or: [ianos_roles_bool_exp!]
 }
 input ianos_roles_order_by_exp {
+level: order_by_direction_enum
 id: order_by_direction_enum
 name: order_by_direction_enum
 title: order_by_direction_enum
-level: order_by_direction_enum
 }
 input ianos_users_bool_exp {
+image: column_input
+verified: column_input
+enabled: column_input
+reset_token: column_input
 reset_expr: column_input
 api_key: column_input
 id: column_input
-approved: column_input
-reset_token: column_input
-name: column_input
-image: column_input
-last_login: column_input
-verified: column_input
-enabled: column_input
-email: column_input
 password: column_input
 public_id: column_input
+last_login: column_input
 verify_expr: column_input
+name: column_input
 role: column_input
-created_on: column_input
+approved: column_input
 verify_token: column_input
-user_role: eshop_roles_bool_exp
+email: column_input
+created_on: column_input
 member_role: ianos_roles_bool_exp
-test_role: test_role_bool_exp
 _and: [ianos_users_bool_exp!]
 _or: [ianos_users_bool_exp!]
 }
 input ianos_users_order_by_exp {
-enabled: order_by_direction_enum
-email: order_by_direction_enum
 password: order_by_direction_enum
 public_id: order_by_direction_enum
 last_login: order_by_direction_enum
-verified: order_by_direction_enum
-role: order_by_direction_enum
-created_on: order_by_direction_enum
-verify_token: order_by_direction_enum
 verify_expr: order_by_direction_enum
 id: order_by_direction_enum
+role: order_by_direction_enum
 approved: order_by_direction_enum
+verify_token: order_by_direction_enum
+name: order_by_direction_enum
+created_on: order_by_direction_enum
+email: order_by_direction_enum
+verified: order_by_direction_enum
+enabled: order_by_direction_enum
 reset_token: order_by_direction_enum
 reset_expr: order_by_direction_enum
 api_key: order_by_direction_enum
-name: order_by_direction_enum
 image: order_by_direction_enum
 }
+input new_schema_roles_bool_exp {
+id: column_input
+name: column_input
+_and: [new_schema_roles_bool_exp!]
+_or: [new_schema_roles_bool_exp!]
+}
+input new_schema_roles_order_by_exp {
+id: order_by_direction_enum
+name: order_by_direction_enum
+}
+input new_schema_users_bool_exp {
+role_id: column_input
+id: column_input
+email: column_input
+password: column_input
+_and: [new_schema_users_bool_exp!]
+_or: [new_schema_users_bool_exp!]
+}
+input new_schema_users_order_by_exp {
+id: order_by_direction_enum
+email: order_by_direction_enum
+password: order_by_direction_enum
+role_id: order_by_direction_enum
+}
 input shop_members_bool_exp {
+email: column_input
+verified: column_input
 password: column_input
 name: column_input
-role_id: column_input
-verified: column_input
-id: column_input
 last_name: column_input
-email: column_input
+role_id: column_input
 active: column_input
+id: column_input
 created_at: column_input
 member_shops: shop_shop_to_member_bool_exp
 role: shop_roles_bool_exp
-member_country: eshop_countries_bool_exp
 _and: [shop_members_bool_exp!]
 _or: [shop_members_bool_exp!]
 }
 input shop_members_order_by_exp {
 email: order_by_direction_enum
-active: order_by_direction_enum
-created_at: order_by_direction_enum
-last_name: order_by_direction_enum
-role_id: order_by_direction_enum
 verified: order_by_direction_enum
-id: order_by_direction_enum
 password: order_by_direction_enum
 name: order_by_direction_enum
+last_name: order_by_direction_enum
+role_id: order_by_direction_enum
+active: order_by_direction_enum
+id: order_by_direction_enum
+created_at: order_by_direction_enum
 }
 input shop_menu_category_bool_exp {
+created_at: column_input
+description: column_input
 thumbnail: column_input
 active: column_input
 order_pos: column_input
 id: column_input
 name: column_input
 menu_id: column_input
-created_at: column_input
-description: column_input
 menu_items: shop_menu_item_bool_exp
 _and: [shop_menu_category_bool_exp!]
 _or: [shop_menu_category_bool_exp!]
 }
 input shop_menu_category_order_by_exp {
-menu_id: order_by_direction_enum
-created_at: order_by_direction_enum
-description: order_by_direction_enum
-thumbnail: order_by_direction_enum
 active: order_by_direction_enum
 order_pos: order_by_direction_enum
 id: order_by_direction_enum
 name: order_by_direction_enum
+menu_id: order_by_direction_enum
+created_at: order_by_direction_enum
+description: order_by_direction_enum
+thumbnail: order_by_direction_enum
 }
 input shop_menu_item_bool_exp {
-id: column_input
-name: column_input
 description: column_input
-thumbnail: column_input
-created_at: column_input
 price: column_input
 menu_category_id: column_input
 active: column_input
 order_pos: column_input
+id: column_input
+thumbnail: column_input
+created_at: column_input
+name: column_input
 menu_category: shop_menu_category_bool_exp
 _and: [shop_menu_item_bool_exp!]
 _or: [shop_menu_item_bool_exp!]
 }
 input shop_menu_item_order_by_exp {
-thumbnail: order_by_direction_enum
-created_at: order_by_direction_enum
+description: order_by_direction_enum
 price: order_by_direction_enum
 menu_category_id: order_by_direction_enum
 active: order_by_direction_enum
 order_pos: order_by_direction_enum
 id: order_by_direction_enum
+thumbnail: order_by_direction_enum
+created_at: order_by_direction_enum
 name: order_by_direction_enum
-description: order_by_direction_enum
 }
 input shop_orders_bool_exp {
 user_id: column_input
@@ -3689,50 +3845,42 @@ status: column_input
 products: column_input
 shop_id: column_input
 id: column_input
-shipping_country: eshop_countries_bool_exp
-country: eshop_countries_bool_exp
-shipping_company: eshop_shipping_companies_bool_exp
-shipping_status: eshop_shipping_statuses_bool_exp
-payment_method: eshop_payment_methods_bool_exp
-payment_status: eshop_payment_statuses_bool_exp
-order_products: eshop_order_products_bool_exp
-order_user: eshop_members_bool_exp
 _and: [shop_orders_bool_exp!]
 _or: [shop_orders_bool_exp!]
 }
 input shop_orders_order_by_exp {
-id: order_by_direction_enum
-user_id: order_by_direction_enum
 created_at: order_by_direction_enum
 status: order_by_direction_enum
 products: order_by_direction_enum
 shop_id: order_by_direction_enum
+id: order_by_direction_enum
+user_id: order_by_direction_enum
 }
 input shop_roles_bool_exp {
+id: column_input
 name: column_input
 permissions: column_input
 created_at: column_input
-id: column_input
 _and: [shop_roles_bool_exp!]
 _or: [shop_roles_bool_exp!]
 }
 input shop_roles_order_by_exp {
-created_at: order_by_direction_enum
-id: order_by_direction_enum
 name: order_by_direction_enum
 permissions: order_by_direction_enum
+created_at: order_by_direction_enum
+id: order_by_direction_enum
 }
 input shop_shop_categories_bool_exp {
+created_at: column_input
 id: column_input
 name: column_input
-created_at: column_input
 _and: [shop_shop_categories_bool_exp!]
 _or: [shop_shop_categories_bool_exp!]
 }
 input shop_shop_categories_order_by_exp {
-id: order_by_direction_enum
 name: order_by_direction_enum
 created_at: order_by_direction_enum
+id: order_by_direction_enum
 }
 input shop_shop_menu_bool_exp {
 id: column_input
@@ -3765,16 +3913,16 @@ _and: [shop_shop_to_member_bool_exp!]
 _or: [shop_shop_to_member_bool_exp!]
 }
 input shop_shop_to_member_order_by_exp {
-member_id: order_by_direction_enum
 shop_id: order_by_direction_enum
+member_id: order_by_direction_enum
 }
 input shop_shops_bool_exp {
-geo: column_input
-details: column_input
-created_at: column_input
 name: column_input
 image: column_input
 id: column_input
+geo: column_input
+details: column_input
+created_at: column_input
 shop_members: shop_shop_to_member_bool_exp
 shop_categories: shop_shop_to_category_bool_exp
 shop_menu: shop_shop_menu_bool_exp
@@ -3782,22 +3930,19 @@ _and: [shop_shops_bool_exp!]
 _or: [shop_shops_bool_exp!]
 }
 input shop_shops_order_by_exp {
-created_at: order_by_direction_enum
-name: order_by_direction_enum
 image: order_by_direction_enum
 id: order_by_direction_enum
 geo: order_by_direction_enum
 details: order_by_direction_enum
+created_at: order_by_direction_enum
+name: order_by_direction_enum
 }
 input shop_users_bool_exp {
-id: column_input
-name: column_input
 last_name: column_input
 email: column_input
 password: column_input
-test_role: test_role_bool_exp
-user_role: eshop_roles_bool_exp
-member_role: ianos_roles_bool_exp
+id: column_input
+name: column_input
 _and: [shop_users_bool_exp!]
 _or: [shop_users_bool_exp!]
 }
@@ -3822,23 +3967,42 @@ name: order_by_direction_enum
 test: order_by_direction_enum
 }
 input test_users_bool_exp {
+id: column_input
 email: column_input
 role_id: column_input
 price: column_input
 password: column_input
-id: column_input
-member_role: ianos_roles_bool_exp
-user_role: eshop_roles_bool_exp
 test_role: test_role_bool_exp
 _and: [test_users_bool_exp!]
 _or: [test_users_bool_exp!]
 }
 input test_users_order_by_exp {
+id: order_by_direction_enum
 email: order_by_direction_enum
 role_id: order_by_direction_enum
 price: order_by_direction_enum
 password: order_by_direction_enum
-id: order_by_direction_enum
+}
+input bi_companies_insert_input {
+objects: [bi_companies_insert_input_objects!]!
+onConflict: bi_companies_insert_input_conflict
+}
+input bi_companies_insert_input_objects {
+id: Int
+name: String
+domain: String
+year_founded: String
+industry: String
+locality: String
+country: String
+linked_in_url: String
+current_employee_estimate: String
+total_employee_estimate: String
+}
+input bi_companies_insert_input_conflict {
+ignore: Boolean
+update: [bi_companies_enum!]
+constraint: String
 }
 input eshop_attribute_categories_insert_input {
 objects: [eshop_attribute_categories_insert_input_objects!]!
@@ -3930,9 +4094,9 @@ id: Int
 user_id: Int
 product_id: Int
 created_at: String
+favorite_to_member: eshop_members_insert_input
 favorite_product: eshop_products_insert_input
 favorite_member_products: eshop_products_insert_input
-favorite_to_member: eshop_members_insert_input
 }
 input eshop_favorites_insert_input_conflict {
 ignore: Boolean
@@ -3972,8 +4136,6 @@ company_name: String
 company_address: String
 vat: String
 member_country: eshop_countries_insert_input
-member_shops: shop_shop_to_member_insert_input
-role: shop_roles_insert_input
 }
 input eshop_members_insert_input_conflict {
 ignore: Boolean
@@ -4011,12 +4173,12 @@ name: Object
 product_name: String
 original_price: String
 discount_price: String
-order: eshop_orders_insert_input
-product_shipping_status: eshop_shipping_statuses_insert_input
-product_payment_status: eshop_payment_statuses_insert_input
 product_by_order: eshop_products_insert_input
 orders_by_product: eshop_orders_insert_input
 products_by_order: eshop_products_insert_input
+order: eshop_orders_insert_input
+product_shipping_status: eshop_shipping_statuses_insert_input
+product_payment_status: eshop_payment_statuses_insert_input
 }
 input eshop_order_products_insert_input_conflict {
 ignore: Boolean
@@ -4065,14 +4227,14 @@ created_at: String
 returned_at: String
 shipped_at: String
 shipping_company_id: Int
+shipping_country: eshop_countries_insert_input
+country: eshop_countries_insert_input
 shipping_company: eshop_shipping_companies_insert_input
 shipping_status: eshop_shipping_statuses_insert_input
 payment_method: eshop_payment_methods_insert_input
 payment_status: eshop_payment_statuses_insert_input
 order_products: eshop_order_products_insert_input
 order_user: eshop_members_insert_input
-shipping_country: eshop_countries_insert_input
-country: eshop_countries_insert_input
 }
 input eshop_orders_insert_input_conflict {
 ignore: Boolean
@@ -4196,9 +4358,9 @@ onConflict: eshop_product_to_tag_insert_input_conflict
 input eshop_product_to_tag_insert_input_objects {
 product_id: Int
 tag_id: Int
+tags: eshop_tags_insert_input
 tag: eshop_tags_insert_input
 product_by_tag: eshop_products_insert_input
-tags: eshop_tags_insert_input
 }
 input eshop_product_to_tag_insert_input_conflict {
 ignore: Boolean
@@ -4242,11 +4404,11 @@ weight: String
 height: String
 width: String
 length: String
+category: eshop_categories_insert_input
 product_tags: eshop_product_to_tag_insert_input
 product_ratings: eshop_product_ratings_insert_input
 product_variants: eshop_product_variants_insert_input
 product_attributes: eshop_product_attributes_insert_input
-category: eshop_categories_insert_input
 }
 input eshop_products_insert_input_conflict {
 ignore: Boolean
@@ -4343,8 +4505,8 @@ onConflict: eshop_supercategory_to_website_insert_input_conflict
 input eshop_supercategory_to_website_insert_input_objects {
 website_id: Int
 supercategory_id: Int
-supercategory: eshop_supercategories_insert_input
 website: eshop_websites_insert_input
+supercategory: eshop_supercategories_insert_input
 }
 input eshop_supercategory_to_website_insert_input_conflict {
 ignore: Boolean
@@ -4381,9 +4543,7 @@ last_name: String
 password: String
 created_at: String
 role_id: Int
-test_role: test_role_insert_input
 user_role: eshop_roles_insert_input
-member_role: ianos_roles_insert_input
 }
 input eshop_users_insert_input_conflict {
 ignore: Boolean
@@ -4485,12 +4645,38 @@ verify_token: String
 verify_expr: String
 api_key: String
 member_role: ianos_roles_insert_input
-test_role: test_role_insert_input
-user_role: eshop_roles_insert_input
 }
 input ianos_users_insert_input_conflict {
 ignore: Boolean
 update: [ianos_users_enum!]
+constraint: String
+}
+input new_schema_roles_insert_input {
+objects: [new_schema_roles_insert_input_objects!]!
+onConflict: new_schema_roles_insert_input_conflict
+}
+input new_schema_roles_insert_input_objects {
+id: Int
+name: String
+}
+input new_schema_roles_insert_input_conflict {
+ignore: Boolean
+update: [new_schema_roles_enum!]
+constraint: String
+}
+input new_schema_users_insert_input {
+objects: [new_schema_users_insert_input_objects!]!
+onConflict: new_schema_users_insert_input_conflict
+}
+input new_schema_users_insert_input_objects {
+id: String
+email: String
+password: String
+role_id: Int
+}
+input new_schema_users_insert_input_conflict {
+ignore: Boolean
+update: [new_schema_users_enum!]
 constraint: String
 }
 input shop_members_insert_input {
@@ -4509,7 +4695,6 @@ password: String
 created_at: String
 member_shops: shop_shop_to_member_insert_input
 role: shop_roles_insert_input
-member_country: eshop_countries_insert_input
 }
 input shop_members_insert_input_conflict {
 ignore: Boolean
@@ -4568,14 +4753,6 @@ created_at: String
 status: String
 products: Object
 shop_id: Int
-shipping_country: eshop_countries_insert_input
-country: eshop_countries_insert_input
-shipping_company: eshop_shipping_companies_insert_input
-shipping_status: eshop_shipping_statuses_insert_input
-payment_method: eshop_payment_methods_insert_input
-payment_status: eshop_payment_statuses_insert_input
-order_products: eshop_order_products_insert_input
-order_user: eshop_members_insert_input
 }
 input shop_orders_insert_input_conflict {
 ignore: Boolean
@@ -4684,9 +4861,6 @@ name: String
 last_name: String
 email: String
 password: String
-member_role: ianos_roles_insert_input
-test_role: test_role_insert_input
-user_role: eshop_roles_insert_input
 }
 input shop_users_insert_input_conflict {
 ignore: Boolean
@@ -4718,14 +4892,24 @@ email: String
 role_id: Int
 price: Int
 password: String
-user_role: eshop_roles_insert_input
 test_role: test_role_insert_input
-member_role: ianos_roles_insert_input
 }
 input test_users_insert_input_conflict {
 ignore: Boolean
 update: [test_users_enum!]
 constraint: String
+}
+input bi_companies_update_input {
+id: Int
+name: String
+domain: String
+year_founded: String
+industry: String
+locality: String
+country: String
+linked_in_url: String
+current_employee_estimate: String
+total_employee_estimate: String
 }
 input eshop_attribute_categories_update_input {
 id: Int
@@ -5022,6 +5206,16 @@ verify_token: String
 verify_expr: String
 api_key: String
 }
+input new_schema_roles_update_input {
+id: Int
+name: String
+}
+input new_schema_users_update_input {
+id: String
+email: String
+password: String
+role_id: Int
+}
 input shop_members_update_input {
 name: String
 last_name: String
@@ -5113,6 +5307,8 @@ price: Int
 password: String
 }
 type Query{
+bi_companies(_where: bi_companies_bool_exp, _groupBy: [bi_companies_enum], _orderBy: bi_companies_order_by_exp, _distinct: [bi_companies_enum], _limit: Int, _offset: Int): [bi_companies!]
+bi_companies_aggregate(_where: bi_companies_bool_exp, _orderBy: bi_companies_order_by_exp, _groupBy: [bi_companies_enum], _distinct: [bi_companies_enum]): bi_companies_aggregate
 eshop_attribute_categories(_where: eshop_attribute_categories_bool_exp, _groupBy: [eshop_attribute_categories_enum], _orderBy: eshop_attribute_categories_order_by_exp, _distinct: [eshop_attribute_categories_enum], _limit: Int, _offset: Int): [eshop_attribute_categories!]
 eshop_attribute_categories_aggregate(_where: eshop_attribute_categories_bool_exp, _orderBy: eshop_attribute_categories_order_by_exp, _groupBy: [eshop_attribute_categories_enum], _distinct: [eshop_attribute_categories_enum]): eshop_attribute_categories_aggregate
 eshop_attributes(_where: eshop_attributes_bool_exp, _groupBy: [eshop_attributes_enum], _orderBy: eshop_attributes_order_by_exp, _distinct: [eshop_attributes_enum], _limit: Int, _offset: Int): [eshop_attributes!]
@@ -5181,6 +5377,10 @@ ianos_roles(_where: ianos_roles_bool_exp, _groupBy: [ianos_roles_enum], _orderBy
 ianos_roles_aggregate(_where: ianos_roles_bool_exp, _orderBy: ianos_roles_order_by_exp, _groupBy: [ianos_roles_enum], _distinct: [ianos_roles_enum]): ianos_roles_aggregate
 ianos_users(_where: ianos_users_bool_exp, _groupBy: [ianos_users_enum], _orderBy: ianos_users_order_by_exp, _distinct: [ianos_users_enum], _limit: Int, _offset: Int): [ianos_users!]
 ianos_users_aggregate(_where: ianos_users_bool_exp, _orderBy: ianos_users_order_by_exp, _groupBy: [ianos_users_enum], _distinct: [ianos_users_enum]): ianos_users_aggregate
+new_schema_roles(_where: new_schema_roles_bool_exp, _groupBy: [new_schema_roles_enum], _orderBy: new_schema_roles_order_by_exp, _distinct: [new_schema_roles_enum], _limit: Int, _offset: Int): [new_schema_roles!]
+new_schema_roles_aggregate(_where: new_schema_roles_bool_exp, _orderBy: new_schema_roles_order_by_exp, _groupBy: [new_schema_roles_enum], _distinct: [new_schema_roles_enum]): new_schema_roles_aggregate
+new_schema_users(_where: new_schema_users_bool_exp, _groupBy: [new_schema_users_enum], _orderBy: new_schema_users_order_by_exp, _distinct: [new_schema_users_enum], _limit: Int, _offset: Int): [new_schema_users!]
+new_schema_users_aggregate(_where: new_schema_users_bool_exp, _orderBy: new_schema_users_order_by_exp, _groupBy: [new_schema_users_enum], _distinct: [new_schema_users_enum]): new_schema_users_aggregate
 shop_members(_where: shop_members_bool_exp, _groupBy: [shop_members_enum], _orderBy: shop_members_order_by_exp, _distinct: [shop_members_enum], _limit: Int, _offset: Int): [shop_members!]
 shop_members_aggregate(_where: shop_members_bool_exp, _orderBy: shop_members_order_by_exp, _groupBy: [shop_members_enum], _distinct: [shop_members_enum]): shop_members_aggregate
 shop_menu_category(_where: shop_menu_category_bool_exp, _groupBy: [shop_menu_category_enum], _orderBy: shop_menu_category_order_by_exp, _distinct: [shop_menu_category_enum], _limit: Int, _offset: Int): [shop_menu_category!]
@@ -5209,6 +5409,9 @@ test_users(_where: test_users_bool_exp, _groupBy: [test_users_enum], _orderBy: t
 test_users_aggregate(_where: test_users_bool_exp, _orderBy: test_users_order_by_exp, _groupBy: [test_users_enum], _distinct: [test_users_enum]): test_users_aggregate
 }
 type Mutation{
+bi_companies_insert(args:bi_companies_insert_input!): Object
+bi_companies_update(set:bi_companies_update_input!,_where:bi_companies_bool_exp): Object
+bi_companies_delete(_where:bi_companies_bool_exp): Object
 eshop_attribute_categories_insert(args:eshop_attribute_categories_insert_input!): Object
 eshop_attribute_categories_update(set:eshop_attribute_categories_update_input!,_where:eshop_attribute_categories_bool_exp): Object
 eshop_attribute_categories_delete(_where:eshop_attribute_categories_bool_exp): Object
@@ -5311,6 +5514,12 @@ ianos_roles_delete(_where:ianos_roles_bool_exp): Object
 ianos_users_insert(args:ianos_users_insert_input!): Object
 ianos_users_update(set:ianos_users_update_input!,_where:ianos_users_bool_exp): Object
 ianos_users_delete(_where:ianos_users_bool_exp): Object
+new_schema_roles_insert(args:new_schema_roles_insert_input!): Object
+new_schema_roles_update(set:new_schema_roles_update_input!,_where:new_schema_roles_bool_exp): Object
+new_schema_roles_delete(_where:new_schema_roles_bool_exp): Object
+new_schema_users_insert(args:new_schema_users_insert_input!): Object
+new_schema_users_update(set:new_schema_users_update_input!,_where:new_schema_users_bool_exp): Object
+new_schema_users_delete(_where:new_schema_users_bool_exp): Object
 shop_members_insert(args:shop_members_insert_input!): Object
 shop_members_update(set:shop_members_update_input!,_where:shop_members_bool_exp): Object
 shop_members_delete(_where:shop_members_bool_exp): Object
